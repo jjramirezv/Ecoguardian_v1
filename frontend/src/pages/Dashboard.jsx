@@ -9,7 +9,7 @@ const MQTT_URL = 'wss://xe11171c.ala.us-east-1.emqxsl.com:8084/mqtt';
 const MQTT_OPTIONS = { clientId: 'Eco-' + Math.random(), username: 'Ecoguardian', password: 'somosecoguardian$1', clean: true };
 
 // URL DEL BACKEND (Cambia esto por tu URL de Render cuando subas a producción)
-const API_URL = 'http://127.0.0.1:8000'; // Asegúrate que coincida con el puerto de tu backend (5000 o 8000)
+const API_URL = 'https://ecoguardian-apii.onrender.com'; // Asegúrate que coincida con el puerto de tu backend (5000 o 8000)
 
 const Dashboard = () => {
   const [loading, setLoading] = useState(false);

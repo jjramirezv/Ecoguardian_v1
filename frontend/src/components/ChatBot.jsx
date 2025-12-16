@@ -48,7 +48,7 @@ const ChatBot = () => {
     setIsLoading(true);
 
     try {
-      const res = await fetch('http://127.0.0.1:8000/assistant_text', {
+      const res = await fetch('https://ecoguardian-apii.onrender.com/assistant_text', {
         method: 'POST', 
         headers: { 'Content-Type': 'application/json' }, 
         body: JSON.stringify({ message: userMsgText })
