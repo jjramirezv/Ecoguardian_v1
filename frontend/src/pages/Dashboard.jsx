@@ -13,7 +13,9 @@ const API_URL = 'https://ecoguardian-apii.onrender.com';
 
 const Dashboard = () => {
   const [loading, setLoading] = useState(false);
-  const [loadingText, setLoadingText] = useState(''); // Nuevo estado para feedback visual
+  const [loadingText, setLoadingText] = useState('');
+  const [errorMessage, setErrorMessage] = useState(''); // Nuevo estado para errores visuales (sin alerts)
+  
   const [mode, setMode] = useState('selector'); 
   const [gpsData, setGpsData] = useState(null);
   const [hwData, setHwData] = useState({ humedad_aire: 0, temp_aire: 0, temp_agua: 0, humedad_suelo: 0 });
@@ -77,24 +79,24 @@ const Dashboard = () => {
     return () => { if (client) client.end(); clearTimeout(watchdog); };
   }, [mode]);
 
-  // --- HANDLERS (CORREGIDOS) ---
+  // --- HANDLERS (CORREGIDOS: SIN ALERTS) ---
 
   const handleGPS = () => {
-    // 1. Limpiamos cualquier estado previo
     setLoading(true);
     setLoadingText('Localizando...');
+    setErrorMessage(''); // Limpiar errores previos
 
     if (!navigator.geolocation) {
-      alert("Tu navegador no soporta GPS.");
+      setErrorMessage("Tu navegador no soporta GPS.");
       setLoading(false);
       return;
     }
 
-    // 2. OPCIONES CRÍTICAS PARA RAPIDEZ EN LAPTOP
+    // CONFIGURACIÓN RÁPIDA (Sin alta precisión para que no demore en laptop)
     const options = {
-        enableHighAccuracy: false, // FALSE = Mucho más rápido (usa WiFi/IP)
-        timeout: 8000,             // Esperar máximo 8 segundos
-        maximumAge: 600000         // Usar ubicación guardada en caché (últimos 10 min)
+        enableHighAccuracy: false, 
+        timeout: 5000,      // Si en 5 seg no responde, corta
+        maximumAge: 300000  // Acepta una ubicación de hace 5 min
     };
 
     navigator.geolocation.getCurrentPosition(
@@ -111,25 +113,29 @@ const Dashboard = () => {
           setMode('gps'); 
           setShowResults(false);
         } catch (error) { 
-            alert("Error conectando con el servidor de clima."); 
+            setErrorMessage("Error de conexión con el servidor.");
         } finally { 
             setLoading(false); 
         }
       }, 
       (err) => {
-        // 3. ERROR SILENCIOSO (Sin ventana de alerta bloqueante)
         console.warn(err);
         setLoading(false);
-        // En lugar de alert, podrías mostrar un texto pequeño de error si quisieras
-        alert("No se pudo obtener ubicación. Verifica permisos o intenta IoT.");
+        // MENSAJE SILENCIOSO EN LUGAR DE ALERT
+        if (err.code === 1) setErrorMessage("Permiso de ubicación denegado.");
+        else if (err.code === 3) setErrorMessage("Tiempo de espera agotado. Intenta de nuevo.");
+        else setErrorMessage("No se pudo obtener ubicación. Verifica tu conexión.");
       }, 
       options
     );
   };
 
   const handleHardwareAccess = () => {
-    // Rompemos cualquier carga pendiente del GPS si el usuario cambia de opinión
-    setLoading(false);
+    // Si el GPS estaba cargando y el usuario se arrepiente y hace clic en IoT, 
+    // cancelamos visualmente la carga del GPS inmediatamente.
+    setLoading(false); 
+    setErrorMessage('');
+    
     setShowPasswordModal(true);
     setInputPassword('');
     setPasswordError('');
@@ -176,19 +182,19 @@ const Dashboard = () => {
 
   return (
     <div className="app-container">
-      {/* --- ESTILOS --- */}
+      {/* --- ESTILOS CSS --- */}
       <style>{`
-        /* Variables heredadas */
+        /* --- LAYOUT GENERAL --- */
         .app-container {
             min-height: 100vh;
             background-color: var(--bg-body);
             display: flex;
             justify-content: center;
-            align-items: center; /* Esto centra verticalmente en laptop */
+            align-items: center; 
             padding: 20px;
         }
 
-        /* GRID PRINCIPAL (MONITOR) */
+        /* --- DASHBOARD (MONITOR) --- */
         .dashboard-grid {
             display: grid;
             grid-template-columns: 380px 1fr;
@@ -217,40 +223,25 @@ const Dashboard = () => {
             overflow: hidden;
         }
 
-        /* --- CORRECCIONES SOLICITADAS --- */
-        
+        /* --- SELECTOR (PANTALLA DE INICIO) --- */
         .selector-container {
             text-align: center;
-            max-width: 1000px; /* Ancho más grande para PC */
             width: 100%;
-            /* 1. SEPARACIÓN DEL NAVBAR (Aumentada) */
-            margin-top: 80px; 
-        }
-
-        /* 2. OCULTAR TÍTULO EN LAPTOP (porque ya está en navbar) */
-        @media (min-width: 769px) {
-            .selector-title-main {
-                display: none;
-            }
-            /* Hacer tarjetas más grandes en Laptop */
-            .option-card {
-                padding: 60px 40px !important; 
-            }
-            .selector-cards {
-                gap: 40px !important;
-            }
+            max-width: 900px; 
+            /* SEPARACIÓN DEL NAVBAR: Más margen arriba */
+            margin-top: 60px; 
         }
 
         .selector-cards {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 20px;
-            margin-top: 40px;
+            gap: 30px;
+            margin-top: 20px;
         }
 
         .option-card {
             background: white;
-            padding: 30px;
+            padding: 40px; /* Padding base */
             border-radius: 24px;
             cursor: pointer;
             transition: transform 0.2s, box-shadow 0.2s;
@@ -263,25 +254,40 @@ const Dashboard = () => {
             box-shadow: 0 15px 40px rgba(131, 176, 95, 0.15);
         }
 
-        /* Responsive Mobile */
+        /* --- AJUSTES ESPECÍFICOS PARA LAPTOP/PC (min-width: 769px) --- */
+        @media (min-width: 769px) {
+            /* OCULTAR EL TÍTULO "ECOGUARDIAN" EN LAPTOP */
+            .selector-title-group {
+                display: none;
+            }
+
+            /* TARJETAS MÁS GRANDES EN LAPTOP */
+            .option-card {
+                padding: 60px 40px; /* Más alto */
+            }
+            
+            .selector-container {
+                margin-top: 100px; /* Aún más separado en pantallas grandes */
+            }
+        }
+
+        /* --- RESPONSIVE MOBILE (max-width: 768px) --- */
         @media (max-width: 768px) {
             .app-container { 
                 padding: 10px; 
                 align-items: flex-start; 
-                padding-top: 20px; /* Espacio normal en celular */
+                padding-top: 20px; 
             }
             .dashboard-grid { display: flex; flex-direction: column-reverse; height: auto; min-height: 100vh; border-radius: 20px; }
             .sidebar { width: 100%; height: auto; border-right: none; border-top: 1px solid #f0f0f0; padding: 20px; order: 1; }
             .scene-area { width: 100%; height: 45vh; min-height: 350px; order: 2; }
-            .selector-cards { grid-template-columns: 1fr; }
+            .selector-cards { grid-template-columns: 1fr; gap: 20px; }
             
-            /* En celular SÍ mostramos el título */
-            .selector-title-main { display: block; }
-            
-            /* Ajuste de margen en celular */
-            .selector-container { margin-top: 20px; }
+            /* MOSTRAR TÍTULO EN CELULAR */
+            .selector-title-group { display: block; }
         }
 
+        /* --- UI COMPONENTS --- */
         .badge { display: inline-block; padding: 6px 14px; border-radius: 20px; font-size: 0.8rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; }
         .badge-gps { background: #eaf4e2; color: var(--primary-dark); }
         .badge-iot { background: #f9f6e8; color: var(--secondary); }
@@ -295,47 +301,64 @@ const Dashboard = () => {
         .btn-white { background: white; border: 1px solid #ddd; color: var(--text-main); }
 
         .floating-label { position: absolute; top: 20px; left: 20px; background: rgba(255,255,255,0.9); padding: 8px 16px; border-radius: 30px; font-weight: 600; color: var(--text-main); display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); z-index: 10; }
+        
+        .error-banner {
+            background-color: #fee2e2;
+            color: #c53030;
+            padding: 10px;
+            border-radius: 10px;
+            margin-top: 15px;
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
       `}</style>
 
       {/* --- MODO SELECTOR --- */}
       {mode === 'selector' ? (
         <div className="selector-container">
           
-          {/* TÍTULO PRINCIPAL (Oculto en PC, Visible en Celular) */}
-          <div className="selector-title-main">
-              <h1 style={{ fontSize: '2.5rem', color: 'var(--text-main)', marginBottom: '10px' }}>EcoGuardian 🌱</h1>
+          {/* TÍTULO (Solo visible en Móvil gracias al CSS) */}
+          <div className="selector-title-group">
+             <h1 style={{ fontSize: '2.5rem', color: 'var(--text-main)', marginBottom: '10px' }}>EcoGuardian 🌱</h1>
+             <p style={{ color: 'var(--text-light)', fontSize: '1.1rem' }}>Selecciona tu fuente de monitoreo</p>
           </div>
-
-          <p style={{ color: 'var(--text-light)', fontSize: '1.2rem' }}>Selecciona tu fuente de monitoreo</p>
           
           <div className="selector-cards">
-            {/* GPS */}
+            {/* OPCIÓN GPS */}
             <div className="option-card" onClick={handleGPS}>
               <div style={{ background: '#eaf4e2', width: 80, height: 80, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 15px' }}>
                 <Satellite size={38} color="var(--primary-dark)" />
               </div>
-              <h3 style={{ color: 'var(--text-main)', fontSize: '1.5rem' }}>Vía Satélite</h3>
-              <p style={{ fontSize: '1rem', color: 'var(--text-light)', marginTop: '5px' }}>Datos climáticos globales (NASA)</p>
+              <h3 style={{ color: 'var(--text-main)', fontSize: '1.4rem' }}>Vía Satélite</h3>
+              <p style={{ fontSize: '0.95rem', color: 'var(--text-light)', marginTop: '5px' }}>Datos climáticos globales</p>
             </div>
 
-            {/* IOT */}
+            {/* OPCIÓN IOT */}
             <div className="option-card" onClick={handleHardwareAccess}>
               <div style={{ background: '#f9f6e8', width: 80, height: 80, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 15px' }}>
                 <Cpu size={38} color="var(--secondary)" />
               </div>
-              <h3 style={{ color: 'var(--text-main)', fontSize: '1.5rem' }}>Sensores IoT</h3>
-              <p style={{ fontSize: '1rem', color: 'var(--text-light)', marginTop: '5px' }}>Conexión a dispositivo local</p>
+              <h3 style={{ color: 'var(--text-main)', fontSize: '1.4rem' }}>Sensores IoT</h3>
+              <p style={{ fontSize: '0.95rem', color: 'var(--text-light)', marginTop: '5px' }}>Conexión a dispositivo local</p>
             </div>
           </div>
           
+          {/* MENSAJES DE ESTADO (Sin Alerts) */}
           {loading && (
              <div style={{ marginTop: '30px', color: 'var(--primary)', fontWeight: 'bold', fontSize: '1.1rem' }}>
+                <span className="loader-spin" style={{display: 'inline-block', width: '20px', height:'20px', border:'3px solid #ccc', borderTop:'3px solid var(--primary)', borderRadius:'50%', animation:'spin 1s linear infinite', marginRight:'10px', verticalAlign:'middle'}}></span>
                 {loadingText || 'Cargando sistema...'}
              </div>
           )}
+
+          {errorMessage && (
+              <div className="error-banner">
+                  ⚠️ {errorMessage}
+              </div>
+          )}
         </div>
       ) : (
-        /* --- MODO DASHBOARD --- */
+        /* --- MODO DASHBOARD (MONITOR) --- */
         <div className="dashboard-grid">
           
           {/* 1. SIDEBAR */}
