@@ -1,78 +1,42 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap');
-
-:root {
-  /* TU GAMA DE COLORES ORIGINAL VIBRANTE */
-  --primary: #83b05f;       /* Verde fresco principal */
-  --primary-dark: #6e964e;  /* Verde oscurecido para hovers */
-  --secondary: #aaab56;     /* Tono tierra/oliva */
-  --accent: #d7a56c;        /* Naranja suave para alertas/acciones */
-  --bg-body: #f4f7f0;       /* Fondo blanco humo/verdoso MUY CLARO */
-  --text-main: #3d4c3d;     /* Gris verdoso oscuro para texto */
-  --text-light: #788575;    /* Gris medio */
-  --white: #ffffff;
+#root {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 2rem;
+  text-align: center;
 }
 
-* { margin: 0; padding: 0; box-sizing: border-box; }
-
-body {
-  font-family: 'Outfit', sans-serif;
-  background-color: var(--bg-body); /* Fondo claro */
-  color: var(--text-main);
-  line-height: 1.6;
+.logo {
+  height: 6em;
+  padding: 1.5em;
+  will-change: filter;
+  transition: filter 300ms;
+}
+.logo:hover {
+  filter: drop-shadow(0 0 2em #646cffaa);
+}
+.logo.react:hover {
+  filter: drop-shadow(0 0 2em #61dafbaa);
 }
 
-/* Botones Modernos y Vibrantes */
-.btn-primary {
-  background-color: var(--primary);
-  color: white;
-  padding: 14px 32px;
-  border-radius: 16px;
-  font-weight: 600;
-  font-size: 1.1rem;
-  border: none;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  box-shadow: 0 4px 15px rgba(131, 176, 95, 0.3);
+@keyframes logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
-.btn-primary:hover {
-  background-color: var(--primary-dark);
-  transform: translateY(-3px);
-  box-shadow: 0 8px 25px rgba(131, 176, 95, 0.4);
+@media (prefers-reduced-motion: no-preference) {
+  a:nth-of-type(2) .logo {
+    animation: logo-spin infinite 20s linear;
+  }
 }
 
-/* --- ESTILOS RESPONSIVE (Móvil) --- */
-@media (max-width: 768px) {
-  /* Hacemos que el contenedor principal sea una columna */
-  .dashboard-container {
-    flex-direction: column;
-    padding: 10px;
-  }
+.card {
+  padding: 2em;
+}
 
-  /* El panel izquierdo (controles) y derecho (3D) ocupan todo el ancho */
-  .control-panel, .visual-panel {
-    width: 100% !important;
-    min-width: 100%;
-    margin-bottom: 20px;
-  }
-
-  /* Ajustamos la altura del modelo 3D en celular para que no sea gigante */
-  .canvas-container {
-    height: 400px !important; 
-    border-radius: 15px;
-  }
-
-  /* Ajustar textos grandes */
-  h1 { font-size: 1.8rem; }
-  h2 { font-size: 1.4rem; }
-
-  /* El modal de WiFi debe verse bien en pantallas pequeñas */
-  .wifi-modal {
-    width: 90% !important;
-    max-width: 350px;
-  }
+.read-the-docs {
+  color: #888;
 }

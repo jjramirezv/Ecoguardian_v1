@@ -1,42 +1,115 @@
-#root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
+/* Contenedor principal de la tarjeta de conexión */
+.container {
+  /* CLAVE DEL RESPONSIVE: */
+  width: 90%;          /* Ocupa el 90% del ancho del celular */
+  max-width: 400px;    /* Pero en PC no pasa de 400px */
+  background: var(--white);
+  padding: 2.5rem;     /* Espaciado interno amplio */
+  border-radius: 24px; /* Bordes muy redondeados (moderno) */
+  box-shadow: 0 10px 30px rgba(61, 76, 61, 0.1); /* Sombra suave */
   text-align: center;
+  transition: all 0.3s ease;
 }
 
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
+/* Estilos para textos dentro de la tarjeta */
+.container h2 {
+  color: var(--primary-dark);
+  margin-bottom: 0.5rem;
+  font-size: 1.8rem;
 }
 
-@keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
+.container p {
+  color: var(--text-light);
+  margin-bottom: 2rem;
+  font-size: 1rem;
+}
+
+/* Iconos de estado */
+.icon-success {
+  font-size: 3rem;
+  color: var(--primary);
+  margin-bottom: 1rem;
+  animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+/* Inputs (Campos de texto) */
+input[type="password"],
+input[type="text"] {
+  width: 100%;
+  padding: 16px;
+  border: 2px solid #e0e6dd;
+  border-radius: 12px;
+  font-family: 'Outfit', sans-serif;
+  font-size: 1rem;
+  color: var(--text-main);
+  background-color: #fcfdfc;
+  outline: none;
+  margin-bottom: 1.5rem;
+  transition: border-color 0.3s;
+}
+
+input:focus {
+  border-color: var(--primary);
+}
+
+/* Botones */
+button {
+  width: 100%;
+  padding: 16px;
+  background-color: var(--primary);
+  color: white;
+  border: none;
+  border-radius: 16px;
+  font-weight: 700;
+  font-size: 1.1rem;
+  cursor: pointer;
+  transition: transform 0.2s, background-color 0.3s;
+  box-shadow: 0 4px 15px rgba(131, 176, 95, 0.4);
+}
+
+button:active {
+  transform: scale(0.98);
+}
+
+/* Mensajes de error */
+.error-msg {
+  color: var(--error);
+  font-size: 0.9rem;
+  margin-top: 1rem;
+  font-weight: 600;
+}
+
+/* --- ANIMACIONES --- */
+
+/* Loader (Circulo girando para "Buscando...") */
+.loader {
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid var(--primary);
+  border-radius: 50%;
+  width: 50px;
+  height: 50px;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 1.5rem auto; /* Centrado */
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes popIn {
+  0% { transform: scale(0); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* --- AJUSTES EXTRA PARA MÓVILES PEQUEÑOS --- */
+@media (max-width: 380px) {
+  .container {
+    padding: 1.5rem;
+    width: 95%;
   }
-  to {
-    transform: rotate(360deg);
+  
+  .container h2 {
+    font-size: 1.5rem;
   }
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
-  }
-}
-
-.card {
-  padding: 2em;
-}
-
-.read-the-docs {
-  color: #888;
 }
