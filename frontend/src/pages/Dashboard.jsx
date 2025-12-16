@@ -26,7 +26,7 @@ const Dashboard = () => {
   const [showHistory, setShowHistory] = useState(false);
   const [loadingHistory, setLoadingHistory] = useState(false);
 
-  // Contraseña
+  // Contraseña (MODIFICADO: Solo estados básicos)
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [inputPassword, setInputPassword] = useState('');
   const [passwordError, setPasswordError] = useState('');
@@ -96,6 +96,7 @@ const Dashboard = () => {
     }
   };
 
+  // MODIFICADO: Abre directo el modal sin escaneo
   const handleHardwareAccess = () => {
     setShowPasswordModal(true);
     setInputPassword('');
@@ -142,9 +143,9 @@ const Dashboard = () => {
 
   return (
     <div className="app-container">
-      {/* --- ESTILOS RESPONSIVE INTERNOS (Adaptados a tu index.css) --- */}
+      {/* --- ESTILOS RESPONSIVE INTERNOS --- */}
       <style>{`
-        /* Usamos las variables de tu index.css */
+        /* Variables heredadas de tu index.css */
         .app-container {
             min-height: 100vh;
             background-color: var(--bg-body);
@@ -154,10 +155,9 @@ const Dashboard = () => {
             padding: 20px;
         }
 
-        /* LAYOUT PRINCIPAL (PC) */
         .dashboard-grid {
             display: grid;
-            grid-template-columns: 380px 1fr; /* Panel izq fijo, escena 3D flexible */
+            grid-template-columns: 380px 1fr;
             width: 100%;
             max-width: 1400px;
             height: 85vh;
@@ -168,7 +168,6 @@ const Dashboard = () => {
             border: 1px solid #eef2eb;
         }
 
-        /* PANEL LATERAL */
         .sidebar {
             padding: 30px;
             overflow-y: auto;
@@ -178,14 +177,12 @@ const Dashboard = () => {
             gap: 20px;
         }
 
-        /* AREA 3D */
         .scene-area {
             position: relative;
             background: linear-gradient(to bottom, #edf7fc, #eaf4e2);
             overflow: hidden;
         }
 
-        /* TARJETAS DE SELECCIÓN */
         .selector-container {
             text-align: center;
             max-width: 800px;
@@ -212,100 +209,32 @@ const Dashboard = () => {
             box-shadow: 0 15px 40px rgba(131, 176, 95, 0.15);
         }
 
-        /* --- RESPONSIVE MOBILE (CELULARES) --- */
+        /* Responsive Mobile */
         @media (max-width: 768px) {
-            .app-container {
-                padding: 10px;
-                align-items: flex-start; /* Evita centrado vertical forzado */
-            }
-
-            /* En móvil, cambiamos Grid a Flex Columna */
-            .dashboard-grid {
-                display: flex;
-                flex-direction: column-reverse; /* IMPORTANTE: Datos abajo, 3D arriba */
-                height: auto;
-                min-height: 100vh;
-                border-radius: 20px;
-            }
-
-            .sidebar {
-                width: 100%;
-                height: auto;
-                border-right: none;
-                border-top: 1px solid #f0f0f0;
-                padding: 20px;
-                order: 1; /* Datos abajo */
-            }
-
-            .scene-area {
-                width: 100%;
-                height: 45vh; /* Altura fija para el 3D en celular */
-                min-height: 350px;
-                order: 2; /* 3D Arriba */
-            }
-
-            .selector-cards {
-                grid-template-columns: 1fr; /* Una columna */
-            }
-            
+            .app-container { padding: 10px; align-items: flex-start; }
+            .dashboard-grid { display: flex; flex-direction: column-reverse; height: auto; min-height: 100vh; border-radius: 20px; }
+            .sidebar { width: 100%; height: auto; border-right: none; border-top: 1px solid #f0f0f0; padding: 20px; order: 1; }
+            .scene-area { width: 100%; height: 45vh; min-height: 350px; order: 2; }
+            .selector-cards { grid-template-columns: 1fr; }
             h2 { font-size: 1.8rem; }
         }
 
-        /* ELEMENTOS UI */
-        .badge {
-            display: inline-block;
-            padding: 6px 14px;
-            border-radius: 20px;
-            font-size: 0.8rem;
-            font-weight: 800;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
+        .badge { display: inline-block; padding: 6px 14px; border-radius: 20px; font-size: 0.8rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; }
         .badge-gps { background: #eaf4e2; color: var(--primary-dark); }
         .badge-iot { background: #f9f6e8; color: var(--secondary); }
 
-        .stat-card {
-            background: #f8f9fa;
-            padding: 15px;
-            border-radius: 16px;
-            text-align: center;
-        }
+        .stat-card { background: #f8f9fa; padding: 15px; border-radius: 16px; text-align: center; }
         .stat-label { font-size: 0.75rem; font-weight: 700; color: var(--text-light); text-transform: uppercase; margin-bottom: 5px; }
         .stat-value { font-size: 1.6rem; font-weight: 800; color: var(--text-main); }
 
-        .btn-action {
-            width: 100%;
-            padding: 14px;
-            border: none;
-            border-radius: 14px;
-            font-weight: 600;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            transition: 0.2s;
-        }
+        .btn-action { width: 100%; padding: 14px; border: none; border-radius: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: 0.2s; }
         .btn-green { background: var(--primary); color: white; }
         .btn-white { background: white; border: 1px solid #ddd; color: var(--text-main); }
 
-        .floating-label {
-            position: absolute;
-            top: 20px; left: 20px;
-            background: rgba(255,255,255,0.9);
-            padding: 8px 16px;
-            border-radius: 30px;
-            font-weight: 600;
-            color: var(--text-main);
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-            z-index: 10;
-        }
+        .floating-label { position: absolute; top: 20px; left: 20px; background: rgba(255,255,255,0.9); padding: 8px 16px; border-radius: 30px; font-weight: 600; color: var(--text-main); display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); z-index: 10; }
       `}</style>
 
-      {/* --- MODO SELECTOR (PANTALLA DE INICIO) --- */}
+      {/* --- MODO SELECTOR --- */}
       {mode === 'selector' ? (
         <div className="selector-container">
           <h1 style={{ fontSize: '2.5rem', color: 'var(--text-main)', marginBottom: '10px' }}>EcoGuardian 🌱</h1>
@@ -333,10 +262,10 @@ const Dashboard = () => {
           {loading && <div style={{ marginTop: '20px', color: 'var(--primary)', fontWeight: 'bold' }}>Cargando sistema...</div>}
         </div>
       ) : (
-        /* --- MODO DASHBOARD (MONITOR) --- */
+        /* --- MODO DASHBOARD --- */
         <div className="dashboard-grid">
           
-          {/* 1. SIDEBAR DE DATOS */}
+          {/* 1. SIDEBAR */}
           <div className="sidebar">
             <button onClick={() => setMode('selector')} style={{ background: 'none', border: 'none', color: 'var(--text-light)', cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '5px', fontWeight: '600' }}>
               <Home size={18} /> Volver al Inicio
@@ -385,52 +314,49 @@ const Dashboard = () => {
             {/* DATOS IOT */}
             {mode === 'hardware' && (
               <>
-                 <div style={{ display: 'flex', justifyContent: 'space-between', padding: '15px', background: mqttConnected ? '#f0fdf4' : '#fff5f5', borderRadius: '12px', alignItems: 'center' }}>
-                    <span style={{ fontSize: '0.9rem', color: 'var(--text-main)' }}>Estado Conexión</span>
-                    <span style={{ fontWeight: '700', color: mqttConnected ? '#2f855a' : '#c53030' }}>{mqttConnected ? 'ONLINE' : 'OFFLINE'}</span>
-                 </div>
-                 
-                 {mqttConnected ? (
-                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
-                      <GaugeChart title="Aire Hum." value={hwData.humedad_aire} max={100} unit="%" color="var(--primary)" icon={Droplets} />
-                      <GaugeChart title="Temp." value={hwData.temp_aire} max={50} unit="°C" color="var(--secondary)" icon={Sun} />
-                      <GaugeChart title="Suelo" value={hwData.humedad_suelo} max={100} unit="%" color="#d7a56c" icon={Sprout} />
-                   </div>
-                 ) : (
-                    <div style={{ textAlign: 'center', padding: '20px', color: 'var(--text-light)' }}>
-                        Esperando datos del sensor...
+                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '15px', background: mqttConnected ? '#f0fdf4' : '#fff5f5', borderRadius: '12px', alignItems: 'center' }}>
+                     <span style={{ fontSize: '0.9rem', color: 'var(--text-main)' }}>Estado Conexión</span>
+                     <span style={{ fontWeight: '700', color: mqttConnected ? '#2f855a' : '#c53030' }}>{mqttConnected ? 'ONLINE' : 'OFFLINE'}</span>
+                  </div>
+                  
+                  {mqttConnected ? (
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+                       <GaugeChart title="Aire Hum." value={hwData.humedad_aire} max={100} unit="%" color="var(--primary)" icon={Droplets} />
+                       <GaugeChart title="Temp." value={hwData.temp_aire} max={50} unit="°C" color="var(--secondary)" icon={Sun} />
+                       <GaugeChart title="Suelo" value={hwData.humedad_suelo} max={100} unit="%" color="#d7a56c" icon={Sprout} />
                     </div>
-                 )}
-                 
-                 <div style={{ marginTop: 'auto' }}>
-                    <div style={{ padding: '15px', borderRadius: '16px', background: 'var(--text-main)', color: 'white', textAlign: 'center', marginBottom: '10px' }}>
+                  ) : (
+                     <div style={{ textAlign: 'center', padding: '20px', color: 'var(--text-light)' }}>
+                        Esperando datos del sensor...
+                     </div>
+                  )}
+                  
+                  <div style={{ marginTop: 'auto' }}>
+                     <div style={{ padding: '15px', borderRadius: '16px', background: 'var(--text-main)', color: 'white', textAlign: 'center', marginBottom: '10px' }}>
                         <div style={{ fontSize: '0.7rem', opacity: 0.7, marginBottom: '5px' }}>ESTADO GENERAL DEL CULTIVO</div>
                         <div style={{ fontSize: '1.1rem', fontWeight: '700' }}>{riesgoHW.nivel}</div>
-                    </div>
+                     </div>
 
-                    <button onClick={loadHistory} className="btn-action btn-white">
-                        <Calendar size={18} /> Ver Historial Diario
-                    </button>
-                 </div>
+                     <button onClick={loadHistory} className="btn-action btn-white">
+                         <Calendar size={18} /> Ver Historial Diario
+                     </button>
+                  </div>
               </>
             )}
           </div>
 
-          {/* 2. ESCENA 3D (VISUAL PANEL) */}
+          {/* 2. ESCENA 3D */}
           <div className="scene-area">
             <div className="floating-label">
               <Activity size={18} color="var(--primary)" /> Visualización Digital
             </div>
-            {/* El Canvas se ajustará automáticamente al tamaño del contenedor .scene-area */}
             <Scene status={activeCode} />
           </div>
 
         </div>
       )}
 
-      {/* --- MODALES (CONTRASEÑA E HISTORIAL) --- */}
-      
-      {/* Modal Contraseña */}
+      {/* --- MODAL IOT (MODIFICADO: SOLO CONTRASEÑA) --- */}
       {showPasswordModal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(5px)', zIndex: 999, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
            <div style={{ background: 'white', padding: '30px', borderRadius: '24px', width: '90%', maxWidth: '350px', textAlign: 'center' }}>
@@ -438,12 +364,14 @@ const Dashboard = () => {
                 <Lock color="var(--secondary)" size={30}/>
               </div>
               <h3 style={{ margin: '0 0 10px 0', color: 'var(--text-main)' }}>Acceso IoT</h3>
+              
               <input 
                 type="password" placeholder="Contraseña" value={inputPassword}
                 onChange={(e) => setInputPassword(e.target.value)}
                 style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #ccc', marginBottom: '10px', fontSize: '1rem' }}
               />
               {passwordError && <div style={{ color: 'red', fontSize: '0.8rem', marginBottom: '10px' }}>{passwordError}</div>}
+              
               <div style={{ display: 'flex', gap: '10px' }}>
                 <button onClick={() => setShowPasswordModal(false)} className="btn-action btn-white">Cancelar</button>
                 <button onClick={verifyPassword} className="btn-action btn-green">Entrar</button>
