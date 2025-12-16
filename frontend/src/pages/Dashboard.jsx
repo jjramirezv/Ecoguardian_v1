@@ -439,7 +439,7 @@ const Dashboard = () => {
               </div>
               <h3 style={{ margin: '0 0 10px 0', color: 'var(--text-main)' }}>Acceso IoT</h3>
               <input 
-                type="password" placeholder="Contraseña (admin)" value={inputPassword}
+                type="password" placeholder="Contraseña" value={inputPassword}
                 onChange={(e) => setInputPassword(e.target.value)}
                 style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #ccc', marginBottom: '10px', fontSize: '1rem' }}
               />
