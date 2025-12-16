@@ -44,3 +44,35 @@ body {
   transform: translateY(-3px);
   box-shadow: 0 8px 25px rgba(131, 176, 95, 0.4);
 }
+
+/* --- ESTILOS RESPONSIVE (Móvil) --- */
+@media (max-width: 768px) {
+  /* Hacemos que el contenedor principal sea una columna */
+  .dashboard-container {
+    flex-direction: column;
+    padding: 10px;
+  }
+
+  /* El panel izquierdo (controles) y derecho (3D) ocupan todo el ancho */
+  .control-panel, .visual-panel {
+    width: 100% !important;
+    min-width: 100%;
+    margin-bottom: 20px;
+  }
+
+  /* Ajustamos la altura del modelo 3D en celular para que no sea gigante */
+  .canvas-container {
+    height: 400px !important; 
+    border-radius: 15px;
+  }
+
+  /* Ajustar textos grandes */
+  h1 { font-size: 1.8rem; }
+  h2 { font-size: 1.4rem; }
+
+  /* El modal de WiFi debe verse bien en pantallas pequeñas */
+  .wifi-modal {
+    width: 90% !important;
+    max-width: 350px;
+  }
+}
