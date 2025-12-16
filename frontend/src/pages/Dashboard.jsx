@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import mqtt from 'mqtt';
-import { Satellite, Cpu, MapPin, ArrowRight, Droplets, Sun, Thermometer, Sprout, Activity, X, Calendar, Lock, Home } from 'lucide-react';
+import { Satellite, Cpu, MapPin, Droplets, Sun, Sprout, Activity, X, Calendar, Lock, Home } from 'lucide-react';
 import Scene from '../components/Scene';
 import GaugeChart from '../components/GaugeChart';
 
@@ -13,6 +13,7 @@ const API_URL = 'https://ecoguardian-apii.onrender.com';
 
 const Dashboard = () => {
   const [loading, setLoading] = useState(false);
+  const [loadingText, setLoadingText] = useState(''); // Nuevo estado para feedback visual
   const [mode, setMode] = useState('selector'); 
   const [gpsData, setGpsData] = useState(null);
   const [hwData, setHwData] = useState({ humedad_aire: 0, temp_aire: 0, temp_agua: 0, humedad_suelo: 0 });
@@ -26,7 +27,7 @@ const Dashboard = () => {
   const [showHistory, setShowHistory] = useState(false);
   const [loadingHistory, setLoadingHistory] = useState(false);
 
-  // Contraseña (MODIFICADO: Solo estados básicos)
+  // Contraseña
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [inputPassword, setInputPassword] = useState('');
   const [passwordError, setPasswordError] = useState('');
@@ -59,11 +60,9 @@ const Dashboard = () => {
                 const datos = JSON.parse(message.toString());
                 setHwData(datos); 
                 setMqttConnected(true); 
-                // Guardar en BD (Silencioso)
                 try {
                     await fetch(`${API_URL}/api/guardar-sensor`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ temp: datos.temp_aire || 0, hum: datos.humedad_aire || 0, precip: datos.precipitacion || 0 })
                     });
                 } catch (err) { console.error("Error BD:", err); }
@@ -78,26 +77,59 @@ const Dashboard = () => {
     return () => { if (client) client.end(); clearTimeout(watchdog); };
   }, [mode]);
 
-  // --- HANDLERS ---
+  // --- HANDLERS (CORREGIDOS) ---
+
   const handleGPS = () => {
+    // 1. Limpiamos cualquier estado previo
     setLoading(true);
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(async (pos) => {
+    setLoadingText('Localizando...');
+
+    if (!navigator.geolocation) {
+      alert("Tu navegador no soporta GPS.");
+      setLoading(false);
+      return;
+    }
+
+    // 2. OPCIONES CRÍTICAS PARA RAPIDEZ EN LAPTOP
+    const options = {
+        enableHighAccuracy: false, // FALSE = Mucho más rápido (usa WiFi/IP)
+        timeout: 8000,             // Esperar máximo 8 segundos
+        maximumAge: 600000         // Usar ubicación guardada en caché (últimos 10 min)
+    };
+
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
         try {
+          setLoadingText('Analizando clima...');
           const res = await fetch(`${API_URL}/api/predict`, {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ lat: pos.coords.latitude, lon: pos.coords.longitude })
           });
           const d = await res.json();
           const r = calcularRiesgo(d.datos_climaticos?.temp_promedio_semanal, d.datos_climaticos?.humedad_promedio_semanal);
-          setGpsData({ ...d, ...r }); setMode('gps'); setShowResults(false);
-        } catch (error) { alert("Error API"); } finally { setLoading(false); }
-      }, () => { alert("Activa tu GPS"); setLoading(false); });
-    }
+          setGpsData({ ...d, ...r }); 
+          setMode('gps'); 
+          setShowResults(false);
+        } catch (error) { 
+            alert("Error conectando con el servidor de clima."); 
+        } finally { 
+            setLoading(false); 
+        }
+      }, 
+      (err) => {
+        // 3. ERROR SILENCIOSO (Sin ventana de alerta bloqueante)
+        console.warn(err);
+        setLoading(false);
+        // En lugar de alert, podrías mostrar un texto pequeño de error si quisieras
+        alert("No se pudo obtener ubicación. Verifica permisos o intenta IoT.");
+      }, 
+      options
+    );
   };
 
-  // MODIFICADO: Abre directo el modal sin escaneo
   const handleHardwareAccess = () => {
+    // Rompemos cualquier carga pendiente del GPS si el usuario cambia de opinión
+    setLoading(false);
     setShowPasswordModal(true);
     setInputPassword('');
     setPasswordError('');
@@ -107,6 +139,7 @@ const Dashboard = () => {
     if (inputPassword === 'admin') {
       setShowPasswordModal(false);
       setLoading(true); 
+      setLoadingText('Conectando sensores...');
       setTimeout(() => { setMode('hardware'); setLoading(false); }, 800);
     } else {
       setPasswordError('Contraseña incorrecta');
@@ -143,18 +176,19 @@ const Dashboard = () => {
 
   return (
     <div className="app-container">
-      {/* --- ESTILOS RESPONSIVE INTERNOS --- */}
+      {/* --- ESTILOS --- */}
       <style>{`
-        /* Variables heredadas de tu index.css */
+        /* Variables heredadas */
         .app-container {
             min-height: 100vh;
             background-color: var(--bg-body);
             display: flex;
             justify-content: center;
-            align-items: center;
+            align-items: center; /* Esto centra verticalmente en laptop */
             padding: 20px;
         }
 
+        /* GRID PRINCIPAL (MONITOR) */
         .dashboard-grid {
             display: grid;
             grid-template-columns: 380px 1fr;
@@ -183,17 +217,37 @@ const Dashboard = () => {
             overflow: hidden;
         }
 
+        /* --- CORRECCIONES SOLICITADAS --- */
+        
         .selector-container {
             text-align: center;
-            max-width: 800px;
+            max-width: 1000px; /* Ancho más grande para PC */
             width: 100%;
+            /* 1. SEPARACIÓN DEL NAVBAR (Aumentada) */
+            margin-top: 80px; 
         }
+
+        /* 2. OCULTAR TÍTULO EN LAPTOP (porque ya está en navbar) */
+        @media (min-width: 769px) {
+            .selector-title-main {
+                display: none;
+            }
+            /* Hacer tarjetas más grandes en Laptop */
+            .option-card {
+                padding: 60px 40px !important; 
+            }
+            .selector-cards {
+                gap: 40px !important;
+            }
+        }
+
         .selector-cards {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 20px;
             margin-top: 40px;
         }
+
         .option-card {
             background: white;
             padding: 30px;
@@ -211,12 +265,21 @@ const Dashboard = () => {
 
         /* Responsive Mobile */
         @media (max-width: 768px) {
-            .app-container { padding: 10px; align-items: flex-start; }
+            .app-container { 
+                padding: 10px; 
+                align-items: flex-start; 
+                padding-top: 20px; /* Espacio normal en celular */
+            }
             .dashboard-grid { display: flex; flex-direction: column-reverse; height: auto; min-height: 100vh; border-radius: 20px; }
             .sidebar { width: 100%; height: auto; border-right: none; border-top: 1px solid #f0f0f0; padding: 20px; order: 1; }
             .scene-area { width: 100%; height: 45vh; min-height: 350px; order: 2; }
             .selector-cards { grid-template-columns: 1fr; }
-            h2 { font-size: 1.8rem; }
+            
+            /* En celular SÍ mostramos el título */
+            .selector-title-main { display: block; }
+            
+            /* Ajuste de margen en celular */
+            .selector-container { margin-top: 20px; }
         }
 
         .badge { display: inline-block; padding: 6px 14px; border-radius: 20px; font-size: 0.8rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; }
@@ -237,29 +300,39 @@ const Dashboard = () => {
       {/* --- MODO SELECTOR --- */}
       {mode === 'selector' ? (
         <div className="selector-container">
-          <h1 style={{ fontSize: '2.5rem', color: 'var(--text-main)', marginBottom: '10px' }}>EcoGuardian 🌱</h1>
-          <p style={{ color: 'var(--text-light)' }}>Selecciona tu fuente de monitoreo</p>
+          
+          {/* TÍTULO PRINCIPAL (Oculto en PC, Visible en Celular) */}
+          <div className="selector-title-main">
+              <h1 style={{ fontSize: '2.5rem', color: 'var(--text-main)', marginBottom: '10px' }}>EcoGuardian 🌱</h1>
+          </div>
+
+          <p style={{ color: 'var(--text-light)', fontSize: '1.2rem' }}>Selecciona tu fuente de monitoreo</p>
           
           <div className="selector-cards">
             {/* GPS */}
             <div className="option-card" onClick={handleGPS}>
-              <div style={{ background: '#eaf4e2', width: 70, height: 70, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 15px' }}>
-                <Satellite size={32} color="var(--primary-dark)" />
+              <div style={{ background: '#eaf4e2', width: 80, height: 80, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 15px' }}>
+                <Satellite size={38} color="var(--primary-dark)" />
               </div>
-              <h3 style={{ color: 'var(--text-main)' }}>Vía Satélite</h3>
-              <p style={{ fontSize: '0.9rem', color: 'var(--text-light)', marginTop: '5px' }}>Datos climáticos globales (NASA)</p>
+              <h3 style={{ color: 'var(--text-main)', fontSize: '1.5rem' }}>Vía Satélite</h3>
+              <p style={{ fontSize: '1rem', color: 'var(--text-light)', marginTop: '5px' }}>Datos climáticos globales (NASA)</p>
             </div>
 
             {/* IOT */}
             <div className="option-card" onClick={handleHardwareAccess}>
-              <div style={{ background: '#f9f6e8', width: 70, height: 70, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 15px' }}>
-                <Cpu size={32} color="var(--secondary)" />
+              <div style={{ background: '#f9f6e8', width: 80, height: 80, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 15px' }}>
+                <Cpu size={38} color="var(--secondary)" />
               </div>
-              <h3 style={{ color: 'var(--text-main)' }}>Sensores IoT</h3>
-              <p style={{ fontSize: '0.9rem', color: 'var(--text-light)', marginTop: '5px' }}>Conexión a dispositivo local</p>
+              <h3 style={{ color: 'var(--text-main)', fontSize: '1.5rem' }}>Sensores IoT</h3>
+              <p style={{ fontSize: '1rem', color: 'var(--text-light)', marginTop: '5px' }}>Conexión a dispositivo local</p>
             </div>
           </div>
-          {loading && <div style={{ marginTop: '20px', color: 'var(--primary)', fontWeight: 'bold' }}>Cargando sistema...</div>}
+          
+          {loading && (
+             <div style={{ marginTop: '30px', color: 'var(--primary)', fontWeight: 'bold', fontSize: '1.1rem' }}>
+                {loadingText || 'Cargando sistema...'}
+             </div>
+          )}
         </div>
       ) : (
         /* --- MODO DASHBOARD --- */
@@ -356,7 +429,7 @@ const Dashboard = () => {
         </div>
       )}
 
-      {/* --- MODAL IOT (MODIFICADO: SOLO CONTRASEÑA) --- */}
+      {/* --- MODAL IOT (SOLO CONTRASEÑA) --- */}
       {showPasswordModal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(5px)', zIndex: 999, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
            <div style={{ background: 'white', padding: '30px', borderRadius: '24px', width: '90%', maxWidth: '350px', textAlign: 'center' }}>
