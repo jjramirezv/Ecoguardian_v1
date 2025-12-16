@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+pandas
+requests
+python-dotenv
+google-generativeai
+tensorflow
+numpy<2.0
+pydantic
+firebase-admin
