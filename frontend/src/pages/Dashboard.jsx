@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import mqtt from 'mqtt';
-import { Satellite, Cpu, MapPin, ArrowRight, Droplets, Sun, Thermometer, Sprout, Activity, X, Calendar, Lock } from 'lucide-react';
+import { Satellite, Cpu, MapPin, ArrowRight, Droplets, Sun, Thermometer, Sprout, Activity, X, Calendar, Lock, Home } from 'lucide-react';
 import Scene from '../components/Scene';
 import GaugeChart from '../components/GaugeChart';
 
@@ -21,12 +21,12 @@ const Dashboard = () => {
   const [predicting, setPredicting] = useState(false);
   const [showResults, setShowResults] = useState(false);
   
-  // --- ESTADOS PARA HISTORIAL ---
+  // Historial
   const [historial, setHistorial] = useState([]);
   const [showHistory, setShowHistory] = useState(false);
   const [loadingHistory, setLoadingHistory] = useState(false);
 
-  // --- NUEVOS ESTADOS PARA CONTRASEÑA ---
+  // Contraseña
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [inputPassword, setInputPassword] = useState('');
   const [passwordError, setPasswordError] = useState('');
@@ -42,59 +42,43 @@ const Dashboard = () => {
     return { nivel: 'CLIMA ÓPTIMO', code: 'optimo' };
   };
 
-  // --- MQTT & HANDLERS ---
+  // --- MQTT ---
   useEffect(() => {
     let client;
     let watchdog; 
-
     if (mode === 'hardware') {
       try {
         setMqttConnected(false); 
         client = mqtt.connect(MQTT_URL, MQTT_OPTIONS);
-
         client.on('connect', () => { 
             console.log("🌐 Conectado al Broker MQTT");
             client.subscribe('ecoguardian/datos'); 
         });
-
         client.on('message', async (topic, message) => { 
             try { 
                 const datos = JSON.parse(message.toString());
                 setHwData(datos); 
                 setMqttConnected(true); 
-
+                // Guardar en BD (Silencioso)
                 try {
                     await fetch(`${API_URL}/api/guardar-sensor`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            temp: datos.temp_aire || 0,
-                            hum: datos.humedad_aire || 0,
-                            precip: datos.precipitacion || 0 
-                        })
+                        body: JSON.stringify({ temp: datos.temp_aire || 0, hum: datos.humedad_aire || 0, precip: datos.precipitacion || 0 })
                     });
                 } catch (err) { console.error("Error BD:", err); }
-
                 clearTimeout(watchdog);
-                watchdog = setTimeout(() => {
-                    setMqttConnected(false);
-                }, 5000); 
-
+                watchdog = setTimeout(() => { setMqttConnected(false); }, 5000); 
             } catch(e) { console.error("Error msg:", e); } 
         });
-
         client.on('offline', () => setMqttConnected(false));
         client.on('error', () => setMqttConnected(false));
       } catch (error) { setMqttConnected(false); }
     }
-    
-    return () => { 
-        if (client) client.end(); 
-        clearTimeout(watchdog);
-    };
+    return () => { if (client) client.end(); clearTimeout(watchdog); };
   }, [mode]);
 
-  // --- FUNCIONES DE BOTONES ---
+  // --- HANDLERS ---
   const handleGPS = () => {
     setLoading(true);
     if (navigator.geolocation) {
@@ -112,7 +96,6 @@ const Dashboard = () => {
     }
   };
 
-  // --- NUEVA FUNCIÓN: VERIFICAR CONTRASEÑA ---
   const handleHardwareAccess = () => {
     setShowPasswordModal(true);
     setInputPassword('');
@@ -120,14 +103,10 @@ const Dashboard = () => {
   };
 
   const verifyPassword = () => {
-    // AQUÍ DEFINES TU CONTRASEÑA (Por defecto: admin)
     if (inputPassword === 'admin') {
       setShowPasswordModal(false);
       setLoading(true); 
-      setTimeout(() => { 
-        setMode('hardware'); 
-        setLoading(false); 
-      }, 800);
+      setTimeout(() => { setMode('hardware'); setLoading(false); }, 800);
     } else {
       setPasswordError('Contraseña incorrecta');
     }
@@ -155,262 +134,347 @@ const Dashboard = () => {
         const data = await res.json();
         if(data.error) throw new Error(data.error);
         setHistorial(data);
-    } catch (e) {
-        alert("Error cargando historial: " + e.message);
-        setShowHistory(false);
-    } finally {
-        setLoadingHistory(false);
-    }
+    } catch (e) { alert("Error: " + e.message); setShowHistory(false); } finally { setLoadingHistory(false); }
   };
 
   const riesgoHW = calcularRiesgo(hwData.temp_aire, hwData.humedad_aire);
   const activeCode = mode === 'hardware' ? (mqttConnected ? riesgoHW.code : 'optimo') : (gpsData ? gpsData.codigo_riesgo : 'optimo');
 
-  const cardStyle = {
-    background: 'white', borderRadius: '24px', padding: '30px', 
-    boxShadow: '0 10px 40px -5px rgba(0,0,0,0.05)', cursor: 'pointer',
-    transition: 'all 0.3s ease', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px',
-    border: '2px solid transparent'
-  };
-
   return (
-    <div className="main-container" style={{ paddingTop: '80px', minHeight: '100vh', background: '#f4f7f0', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-      
-      {/* --- ESTILOS RESPONSIVE INYECTADOS --- */}
+    <div className="app-container">
+      {/* --- ESTILOS RESPONSIVE INTERNOS (Adaptados a tu index.css) --- */}
       <style>{`
-        .dashboard-layout {
-          display: flex;
-          width: 95%;
-          max-width: 1400px;
-          height: 85vh;
-          background: white;
-          border-radius: 32px;
-          box-shadow: 0 20px 60px rgba(0,0,0,0.05);
-          overflow: hidden;
-          border: 1px solid #eef2eb;
-          position: relative;
-        }
-        .sidebar {
-          width: 400px;
-          padding: 30px;
-          display: flex;
-          flex-direction: column;
-          border-right: 1px solid #f0f0f0;
-          overflow-y: auto;
-        }
-        .scene-container {
-          flex: 1;
-          position: relative;
-          background: linear-gradient(to bottom, #edf7fc, #eaf4e2);
-        }
-        /* CELULAR (Pantallas menores a 768px) */
-        @media (max-width: 768px) {
-          .main-container { padding-top: 20px !important; align-items: flex-start !important; }
-          .dashboard-layout {
-            flex-direction: column; /* Apilar verticalmente */
-            height: auto;
+        /* Usamos las variables de tu index.css */
+        .app-container {
             min-height: 100vh;
-            border-radius: 0;
+            background-color: var(--bg-body);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        /* LAYOUT PRINCIPAL (PC) */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 380px 1fr; /* Panel izq fijo, escena 3D flexible */
             width: 100%;
-          }
-          .sidebar {
-            width: 100%; /* Ocupar todo el ancho */
-            height: auto;
-            border-right: none;
-            border-bottom: 1px solid #f0f0f0;
-            order: 2; /* Poner controles abajo (opcional) o arriba */
-          }
-          .scene-container {
-            height: 400px; /* Altura fija para el 3D en celular */
-            order: 1;
-          }
-          .modal-content { width: 90% !important; }
+            max-width: 1400px;
+            height: 85vh;
+            background: white;
+            border-radius: 32px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.08);
+            overflow: hidden;
+            border: 1px solid #eef2eb;
+        }
+
+        /* PANEL LATERAL */
+        .sidebar {
+            padding: 30px;
+            overflow-y: auto;
+            border-right: 1px solid #f0f0f0;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        /* AREA 3D */
+        .scene-area {
+            position: relative;
+            background: linear-gradient(to bottom, #edf7fc, #eaf4e2);
+            overflow: hidden;
+        }
+
+        /* TARJETAS DE SELECCIÓN */
+        .selector-container {
+            text-align: center;
+            max-width: 800px;
+            width: 100%;
+        }
+        .selector-cards {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-top: 40px;
+        }
+        .option-card {
+            background: white;
+            padding: 30px;
+            border-radius: 24px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            border: 2px solid transparent;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+        }
+        .option-card:hover {
+            transform: translateY(-5px);
+            border-color: var(--primary);
+            box-shadow: 0 15px 40px rgba(131, 176, 95, 0.15);
+        }
+
+        /* --- RESPONSIVE MOBILE (CELULARES) --- */
+        @media (max-width: 768px) {
+            .app-container {
+                padding: 10px;
+                align-items: flex-start; /* Evita centrado vertical forzado */
+            }
+
+            /* En móvil, cambiamos Grid a Flex Columna */
+            .dashboard-grid {
+                display: flex;
+                flex-direction: column-reverse; /* IMPORTANTE: Datos abajo, 3D arriba */
+                height: auto;
+                min-height: 100vh;
+                border-radius: 20px;
+            }
+
+            .sidebar {
+                width: 100%;
+                height: auto;
+                border-right: none;
+                border-top: 1px solid #f0f0f0;
+                padding: 20px;
+                order: 1; /* Datos abajo */
+            }
+
+            .scene-area {
+                width: 100%;
+                height: 45vh; /* Altura fija para el 3D en celular */
+                min-height: 350px;
+                order: 2; /* 3D Arriba */
+            }
+
+            .selector-cards {
+                grid-template-columns: 1fr; /* Una columna */
+            }
+            
+            h2 { font-size: 1.8rem; }
+        }
+
+        /* ELEMENTOS UI */
+        .badge {
+            display: inline-block;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .badge-gps { background: #eaf4e2; color: var(--primary-dark); }
+        .badge-iot { background: #f9f6e8; color: var(--secondary); }
+
+        .stat-card {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 16px;
+            text-align: center;
+        }
+        .stat-label { font-size: 0.75rem; font-weight: 700; color: var(--text-light); text-transform: uppercase; margin-bottom: 5px; }
+        .stat-value { font-size: 1.6rem; font-weight: 800; color: var(--text-main); }
+
+        .btn-action {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: 0.2s;
+        }
+        .btn-green { background: var(--primary); color: white; }
+        .btn-white { background: white; border: 1px solid #ddd; color: var(--text-main); }
+
+        .floating-label {
+            position: absolute;
+            top: 20px; left: 20px;
+            background: rgba(255,255,255,0.9);
+            padding: 8px 16px;
+            border-radius: 30px;
+            font-weight: 600;
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            z-index: 10;
         }
       `}</style>
 
+      {/* --- MODO SELECTOR (PANTALLA DE INICIO) --- */}
       {mode === 'selector' ? (
-        <div style={{ width: '100%', maxWidth: '900px', padding: '20px', textAlign: 'center' }}>
-          <h2 style={{ fontSize: '2.5rem', color: '#3d4c3d', marginBottom: '10px' }}>¿Cómo quieres trabajar hoy?</h2>
-          <p style={{ color: '#788575', marginBottom: '50px' }}>Selecciona la fuente de datos para tus cultivos.</p>
+        <div className="selector-container">
+          <h1 style={{ fontSize: '2.5rem', color: 'var(--text-main)', marginBottom: '10px' }}>EcoGuardian 🌱</h1>
+          <p style={{ color: 'var(--text-light)' }}>Selecciona tu fuente de monitoreo</p>
           
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '30px' }}>
-            {/* OPCIÓN GPS */}
-            <div style={cardStyle} onClick={handleGPS}>
-              <div style={{ padding: '25px', background: '#eaf4e2', borderRadius: '50%', color: '#6e964e' }}><Satellite size={40} /></div>
-              <div>
-                <h3 style={{ fontSize: '1.4rem', color: '#3d4c3d' }}>Vía Satélite (GPS)</h3>
-                <p style={{ color: '#788575', marginTop: '5px' }}>Usar ubicación actual y datos de la NASA.</p>
+          <div className="selector-cards">
+            {/* GPS */}
+            <div className="option-card" onClick={handleGPS}>
+              <div style={{ background: '#eaf4e2', width: 70, height: 70, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 15px' }}>
+                <Satellite size={32} color="var(--primary-dark)" />
               </div>
+              <h3 style={{ color: 'var(--text-main)' }}>Vía Satélite</h3>
+              <p style={{ fontSize: '0.9rem', color: 'var(--text-light)', marginTop: '5px' }}>Datos climáticos globales (NASA)</p>
             </div>
 
-            {/* OPCIÓN IOT (AHORA PIDE CONTRASEÑA) */}
-            <div style={cardStyle} onClick={handleHardwareAccess}>
-              <div style={{ padding: '25px', background: '#f9f6e8', borderRadius: '50%', color: '#b0ab62' }}><Cpu size={40} /></div>
-              <div>
-                <h3 style={{ fontSize: '1.4rem', color: '#3d4c3d' }}>Sensores IoT</h3>
-                <p style={{ color: '#788575', marginTop: '5px' }}>Conexión directa con tu equipo EcoGuardian.</p>
+            {/* IOT */}
+            <div className="option-card" onClick={handleHardwareAccess}>
+              <div style={{ background: '#f9f6e8', width: 70, height: 70, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 15px' }}>
+                <Cpu size={32} color="var(--secondary)" />
               </div>
+              <h3 style={{ color: 'var(--text-main)' }}>Sensores IoT</h3>
+              <p style={{ fontSize: '0.9rem', color: 'var(--text-light)', marginTop: '5px' }}>Conexión a dispositivo local</p>
             </div>
           </div>
-          {loading && <div style={{ marginTop: '30px', fontWeight: '600', color: '#83b05f' }}>Cargando sistema...</div>}
+          {loading && <div style={{ marginTop: '20px', color: 'var(--primary)', fontWeight: 'bold' }}>Cargando sistema...</div>}
         </div>
       ) : (
-        <div className="dashboard-layout">
+        /* --- MODO DASHBOARD (MONITOR) --- */
+        <div className="dashboard-grid">
           
-          {/* PANEL LATERAL (SIDEBAR) */}
+          {/* 1. SIDEBAR DE DATOS */}
           <div className="sidebar">
-            <button onClick={() => setMode('selector')} style={{ background: 'none', border: 'none', color: '#788575', cursor: 'pointer', textAlign: 'left', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '5px', fontWeight: '600' }}>
-              <ArrowRight size={16} style={{transform: 'rotate(180deg)'}}/> Cambiar Modo
+            <button onClick={() => setMode('selector')} style={{ background: 'none', border: 'none', color: 'var(--text-light)', cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '5px', fontWeight: '600' }}>
+              <Home size={18} /> Volver al Inicio
             </button>
 
-            <h2 style={{ fontSize: '1.8rem', color: '#3d4c3d', marginBottom: '5px' }}>Monitor</h2>
-            <div style={{ display: 'inline-block', padding: '5px 12px', background: mode === 'gps' ? '#eaf4e2' : '#f9f6e8', color: mode === 'gps' ? '#6e964e' : '#b0ab62', borderRadius: '12px', fontSize: '0.8rem', fontWeight: '700', alignSelf: 'flex-start', marginBottom: '25px' }}>
-              {mode === 'gps' ? '🛰️ SATELITAL' : '📡 SENSORES IOT'}
+            <div>
+                <h2 style={{ fontSize: '1.8rem', color: 'var(--text-main)', margin: 0 }}>Monitor</h2>
+                <div style={{ marginTop: '10px' }}>
+                    <span className={`badge ${mode === 'gps' ? 'badge-gps' : 'badge-iot'}`}>
+                        {mode === 'gps' ? '🛰️ SATELITAL' : '📡 SENSORES IOT'}
+                    </span>
+                </div>
             </div>
 
+            {/* DATOS GPS */}
             {mode === 'gps' && gpsData && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#788575', fontSize: '0.9rem' }}>
+              <>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-light)', fontSize: '0.9rem' }}>
                   <MapPin size={16} /> {gpsData.ubicacion}
                 </div>
                 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                  <div style={{ background: '#f8f9fa', padding: '15px', borderRadius: '16px', textAlign: 'center' }}>
-                    <div style={{ fontSize: '0.8rem', color: '#aaab56', fontWeight: '700' }}>TEMPERATURA</div>
-                    <div style={{ fontSize: '1.5rem', fontWeight: '800', color: '#3d4c3d' }}>{gpsData.datos_climaticos.temp_promedio_semanal}°</div>
+                  <div className="stat-card">
+                    <div className="stat-label">Temperatura</div>
+                    <div className="stat-value">{gpsData.datos_climaticos.temp_promedio_semanal}°</div>
                   </div>
-                  <div style={{ background: '#f8f9fa', padding: '15px', borderRadius: '16px', textAlign: 'center' }}>
-                    <div style={{ fontSize: '0.8rem', color: '#83b05f', fontWeight: '700' }}>HUMEDAD</div>
-                    <div style={{ fontSize: '1.5rem', fontWeight: '800', color: '#3d4c3d' }}>{gpsData.datos_climaticos.humedad_promedio_semanal}%</div>
+                  <div className="stat-card">
+                    <div className="stat-label">Humedad</div>
+                    <div className="stat-value">{gpsData.datos_climaticos.humedad_promedio_semanal}%</div>
                   </div>
                 </div>
 
-                <button onClick={handleModelPrediction} disabled={predicting} className="btn-primary" style={{ width: '100%', marginTop: '10px', padding:'12px', background:'#2d6a4f', color:'white', border:'none', borderRadius:'10px', cursor:'pointer' }}>
-                  {predicting ? 'Analizando...' : 'Analizar Riesgo IA'}
+                <button onClick={handleModelPrediction} disabled={predicting} className="btn-action btn-green">
+                  {predicting ? 'Analizando...' : 'Analizar Riesgo con IA'}
                 </button>
 
                 {showResults && modelPrediction && (
-                   <div style={{ marginTop: '20px', padding: '20px', borderRadius: '20px', background: modelPrediction.prediccion_modelo?.codigo_riesgo === 'rancha' ? '#fff5f5' : '#f0fdf4', border: '1px solid', borderColor: modelPrediction.prediccion_modelo?.codigo_riesgo === 'rancha' ? '#fed7d7' : '#bbf7d0' }}>
+                   <div style={{ padding: '20px', borderRadius: '16px', background: modelPrediction.prediccion_modelo?.codigo_riesgo === 'rancha' ? '#fff5f5' : '#f0fdf4', border: '1px solid', borderColor: modelPrediction.prediccion_modelo?.codigo_riesgo === 'rancha' ? '#fed7d7' : '#bbf7d0' }}>
                      <div style={{ fontSize: '0.8rem', fontWeight: '700', color: modelPrediction.prediccion_modelo?.codigo_riesgo === 'rancha' ? '#c53030' : '#2f855a', marginBottom: '5px' }}>DIAGNÓSTICO</div>
-                     <div style={{ fontSize: '1.3rem', fontWeight: '800', color: '#3d4c3d' }}>{modelPrediction.prediccion_modelo?.nivel_riesgo}</div>
+                     <div style={{ fontSize: '1.2rem', fontWeight: '800', color: 'var(--text-main)' }}>{modelPrediction.prediccion_modelo?.nivel_riesgo}</div>
                    </div>
                 )}
-              </div>
+              </>
             )}
 
+            {/* DATOS IOT */}
             {mode === 'hardware' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              <>
                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '15px', background: mqttConnected ? '#f0fdf4' : '#fff5f5', borderRadius: '12px', alignItems: 'center' }}>
-                    <span style={{ fontSize: '0.9rem', color: '#3d4c3d' }}>Estado Conexión</span>
+                    <span style={{ fontSize: '0.9rem', color: 'var(--text-main)' }}>Estado Conexión</span>
                     <span style={{ fontWeight: '700', color: mqttConnected ? '#2f855a' : '#c53030' }}>{mqttConnected ? 'ONLINE' : 'OFFLINE'}</span>
                  </div>
                  
-                 {mqttConnected && (
+                 {mqttConnected ? (
                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
-                      <GaugeChart title="Aire Hum." value={hwData.humedad_aire} max={100} unit="%" color="#83b05f" icon={Droplets} />
-                      <GaugeChart title="Temp." value={hwData.temp_aire} max={50} unit="°C" color="#aaab56" icon={Sun} />
+                      <GaugeChart title="Aire Hum." value={hwData.humedad_aire} max={100} unit="%" color="var(--primary)" icon={Droplets} />
+                      <GaugeChart title="Temp." value={hwData.temp_aire} max={50} unit="°C" color="var(--secondary)" icon={Sun} />
                       <GaugeChart title="Suelo" value={hwData.humedad_suelo} max={100} unit="%" color="#d7a56c" icon={Sprout} />
-                      <GaugeChart title="Agua" value={hwData.temp_agua} max={40} unit="°C" color="#5a86ad" icon={Thermometer} />
                    </div>
+                 ) : (
+                    <div style={{ textAlign: 'center', padding: '20px', color: 'var(--text-light)' }}>
+                        Esperando datos del sensor...
+                    </div>
                  )}
                  
-                 <div style={{ padding: '20px', borderRadius: '16px', background: '#3d4c3d', color: 'white', textAlign: 'center', marginTop: 'auto' }}>
-                    <div style={{ fontSize: '0.8rem', opacity: 0.7, marginBottom: '5px' }}>ESTADO GENERAL</div>
-                    <div style={{ fontSize: '1.2rem', fontWeight: '700' }}>{riesgoHW.nivel}</div>
-                 </div>
+                 <div style={{ marginTop: 'auto' }}>
+                    <div style={{ padding: '15px', borderRadius: '16px', background: 'var(--text-main)', color: 'white', textAlign: 'center', marginBottom: '10px' }}>
+                        <div style={{ fontSize: '0.7rem', opacity: 0.7, marginBottom: '5px' }}>ESTADO GENERAL DEL CULTIVO</div>
+                        <div style={{ fontSize: '1.1rem', fontWeight: '700' }}>{riesgoHW.nivel}</div>
+                    </div>
 
-                 <button onClick={loadHistory} style={{
-                   marginTop: '10px', padding: '12px', border: '1px solid #ddd', borderRadius: '12px',
-                   background: 'white', color: '#3d4c3d', fontWeight: '600', cursor: 'pointer',
-                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'
-                 }}>
-                    <Calendar size={18} /> Ver Historial Diario
-                 </button>
-              </div>
+                    <button onClick={loadHistory} className="btn-action btn-white">
+                        <Calendar size={18} /> Ver Historial Diario
+                    </button>
+                 </div>
+              </>
             )}
           </div>
 
-          {/* PANEL VISUAL (ESCENA 3D) */}
-          <div className="scene-container">
-            <Scene status={activeCode} />
-            <div style={{ position: 'absolute', top: '30px', right: '30px', padding: '10px 20px', background: 'rgba(255,255,255,0.8)', backdropFilter: 'blur(5px)', borderRadius: '30px', fontWeight: '600', color: '#3d4c3d', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 5px 15px rgba(0,0,0,0.05)' }}>
-              <Activity size={18} color="#83b05f" /> Visualización Digital
+          {/* 2. ESCENA 3D (VISUAL PANEL) */}
+          <div className="scene-area">
+            <div className="floating-label">
+              <Activity size={18} color="var(--primary)" /> Visualización Digital
             </div>
+            {/* El Canvas se ajustará automáticamente al tamaño del contenedor .scene-area */}
+            <Scene status={activeCode} />
           </div>
+
         </div>
       )}
 
-      {/* --- MODAL DE CONTRASEÑA --- */}
+      {/* --- MODALES (CONTRASEÑA E HISTORIAL) --- */}
+      
+      {/* Modal Contraseña */}
       {showPasswordModal && (
-        <div style={{
-           position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
-           background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(5px)', zIndex: 200,
-           display: 'flex', justifyContent: 'center', alignItems: 'center'
-        }}>
-           <div className="modal-content" style={{
-              background: 'white', padding: '30px', borderRadius: '24px', width: '350px',
-              textAlign: 'center', boxShadow: '0 20px 60px rgba(0,0,0,0.2)'
-           }}>
-              <div style={{background:'#f9f6e8', width:'60px', height:'60px', borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 20px'}}>
-                <Lock color="#b0ab62" size={30}/>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(5px)', zIndex: 999, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+           <div style={{ background: 'white', padding: '30px', borderRadius: '24px', width: '90%', maxWidth: '350px', textAlign: 'center' }}>
+              <div style={{ background: '#f9f6e8', width: 60, height: 60, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
+                <Lock color="var(--secondary)" size={30}/>
               </div>
-              <h3 style={{margin:'0 0 10px 0', color:'#3d4c3d'}}>Acceso IoT</h3>
-              <p style={{margin:'0 0 20px 0', color:'#666', fontSize:'0.9rem'}}>Ingresa la contraseña del dispositivo</p>
-              
+              <h3 style={{ margin: '0 0 10px 0', color: 'var(--text-main)' }}>Acceso IoT</h3>
               <input 
-                type="password" 
-                placeholder="Contraseña (admin)" 
-                value={inputPassword}
+                type="password" placeholder="Contraseña (admin)" value={inputPassword}
                 onChange={(e) => setInputPassword(e.target.value)}
-                style={{
-                  width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #ccc',
-                  marginBottom: '10px', fontSize: '1rem', outline:'none'
-                }}
+                style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #ccc', marginBottom: '10px', fontSize: '1rem' }}
               />
-              {passwordError && <div style={{color:'red', fontSize:'0.8rem', marginBottom:'10px'}}>{passwordError}</div>}
-              
-              <div style={{display:'flex', gap:'10px'}}>
-                <button onClick={() => setShowPasswordModal(false)} style={{flex:1, padding:'12px', border:'none', background:'#f0f0f0', borderRadius:'10px', cursor:'pointer', fontWeight:'bold'}}>Cancelar</button>
-                <button onClick={verifyPassword} style={{flex:1, padding:'12px', border:'none', background:'#2d6a4f', color:'white', borderRadius:'10px', cursor:'pointer', fontWeight:'bold'}}>Entrar</button>
+              {passwordError && <div style={{ color: 'red', fontSize: '0.8rem', marginBottom: '10px' }}>{passwordError}</div>}
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button onClick={() => setShowPasswordModal(false)} className="btn-action btn-white">Cancelar</button>
+                <button onClick={verifyPassword} className="btn-action btn-green">Entrar</button>
               </div>
            </div>
         </div>
       )}
 
-      {/* --- MODAL DE HISTORIAL --- */}
+      {/* Modal Historial */}
       {showHistory && (
-        <div style={{
-            position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
-            background: 'rgba(0,0,0,0.5)', zIndex: 100, display: 'flex', justifyContent: 'center', alignItems: 'center'
-        }}>
-            <div className="modal-content" style={{
-                width: '80%', maxWidth: '600px', background: 'white', borderRadius: '24px', padding: '30px',
-                boxShadow: '0 20px 60px rgba(0,0,0,0.2)', maxHeight: '80%', overflowY: 'auto'
-            }}>
-                <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'20px'}}>
-                    <h3 style={{margin:0, color:'#3d4c3d', fontSize:'1.5rem'}}>Historial de Promedios</h3>
-                    <button onClick={() => setShowHistory(false)} style={{background:'none', border:'none', cursor:'pointer'}}><X/></button>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 999, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+            <div style={{ width: '90%', maxWidth: '600px', background: 'white', borderRadius: '24px', padding: '25px', maxHeight: '80vh', overflowY: 'auto' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                    <h3 style={{ margin: 0, color: 'var(--text-main)' }}>Historial</h3>
+                    <button onClick={() => setShowHistory(false)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}><X/></button>
                 </div>
-
-                {loadingHistory ? (
-                    <p>Cargando datos...</p>
-                ) : (
-                    <table style={{width:'100%', borderCollapse:'collapse'}}>
+                {loadingHistory ? <p>Cargando...</p> : (
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
                         <thead>
-                            <tr style={{borderBottom:'2px solid #eee', color:'#888', fontSize:'0.9rem'}}>
-                                <th style={{padding:'10px', textAlign:'left'}}>Fecha</th>
-                                <th style={{padding:'10px', textAlign:'center'}}>Temp Prom.</th>
-                                <th style={{padding:'10px', textAlign:'center'}}>Hum Prom.</th>
-                                <th style={{padding:'10px', textAlign:'center'}}>Lluvia Total</th>
+                            <tr style={{ borderBottom: '2px solid #eee', color: 'var(--text-light)' }}>
+                                <th style={{ textAlign: 'left', padding: '10px' }}>Fecha</th>
+                                <th style={{ padding: '10px' }}>Temp</th>
+                                <th style={{ padding: '10px' }}>Hum</th>
                             </tr>
                         </thead>
                         <tbody>
                             {historial.map((dia, i) => (
-                                <tr key={i} style={{borderBottom:'1px solid #f0f0f0'}}>
-                                    <td style={{padding:'15px 10px', fontWeight:'600'}}>{dia.fecha}</td>
-                                    <td style={{padding:'15px 10px', textAlign:'center', color:'#aaab56'}}>{dia.temperatura}°C</td>
-                                    <td style={{padding:'15px 10px', textAlign:'center', color:'#83b05f'}}>{dia.humedad}%</td>
-                                    <td style={{padding:'15px 10px', textAlign:'center', color:'#5a86ad'}}>{dia.precipitacion}mm</td>
+                                <tr key={i} style={{ borderBottom: '1px solid #f9f9f9' }}>
+                                    <td style={{ padding: '12px 10px', fontWeight: '600' }}>{dia.fecha}</td>
+                                    <td style={{ textAlign: 'center', color: 'var(--secondary)' }}>{dia.temperatura}°</td>
+                                    <td style={{ textAlign: 'center', color: 'var(--primary)' }}>{dia.humedad}%</td>
                                 </tr>
                             ))}
                         </tbody>
@@ -419,7 +483,6 @@ const Dashboard = () => {
             </div>
         </div>
       )}
-
     </div>
   );
 };
