@@ -1,42 +1,80 @@
-#root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap');
+
+:root {
+  /* TU GAMA DE COLORES ORIGINAL */
+  --primary: #83b05f;
+  --primary-dark: #6e964e;
+  --secondary: #aaab56;
+  --accent: #d7a56c;
+  --bg-body: #f4f7f0;
+  --text-main: #3d4c3d;
+  --text-light: #788575;
+  --white: #ffffff;
+  --error: #e74c3c; 
 }
 
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: 'Outfit', sans-serif;
+  background-color: var(--bg-body);
+  color: var(--text-main);
+  line-height: 1.6;
+
+  /* AGREGADO: Para que la app esté siempre centrada y ocupe toda la altura */
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
-@keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
+/* --- TUS ESTILOS ORIGINALES DE BOTONES (RESTAURADOS) --- */
+.btn-primary {
+  background-color: var(--primary);
+  color: white;
+  padding: 14px 32px;
+  border-radius: 16px;
+  font-weight: 600; /* Restaurado el grosor correcto */
+  font-size: 1.1rem;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  box-shadow: 0 4px 15px rgba(131, 176, 95, 0.3);
+  
+  /* Agregado para responsive: que ocupe el ancho disponible si es necesario */
+  width: 100%; 
+}
+
+.btn-primary:hover {
+  background-color: var(--primary-dark);
+  transform: translateY(-3px);
+  box-shadow: 0 8px 25px rgba(131, 176, 95, 0.4);
+}
+
+/* --- TUS ESTILOS RESPONSIVE DEL DASHBOARD --- */
+.dashboard-container {
+  display: flex;
+  gap: 20px;
+  padding: 20px;
+  width: 100%;
+}
+
+@media (max-width: 768px) {
+  .dashboard-container {
+    flex-direction: column;
+    padding: 10px;
   }
-  to {
-    transform: rotate(360deg);
+  .control-panel, .visual-panel {
+    width: 100% !important;
+    min-width: 100%;
+    margin-bottom: 20px;
   }
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
+  .canvas-container {
+    height: 400px !important; 
+    border-radius: 15px;
   }
-}
-
-.card {
-  padding: 2em;
-}
-
-.read-the-docs {
-  color: #888;
 }
