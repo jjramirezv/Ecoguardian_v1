@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import Navbar from './components/Navbar';
 import Home from './pages/Home';
 import Dashboard from './pages/Dashboard';
-import ChatBot from './components/ChatBot'; // Asumiendo que está en components
+import ChatBot from './components/ChatBot'; 
 
 function App() {
   const [view, setView] = useState('home');
@@ -18,8 +18,6 @@ function App() {
           <Dashboard />
         )}
       </main>
-
-      {/* Chatbot siempre visible */}
       <ChatBot />
     </>
   );

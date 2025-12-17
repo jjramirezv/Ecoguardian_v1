@@ -8,15 +8,14 @@ import numpy as np
 import os
 import json 
 
-# ### NUEVO: Importaciones para el Chatbot
+# importaciones para el chatbot
 import google.generativeai as genai
 from dotenv import load_dotenv
 
-# ### NUEVO: Importaciones para Firebase (Base de Datos)
+# importaciones para Firebase (Base de Datos)
 import firebase_admin
 from firebase_admin import credentials, firestore
 
-# ### NUEVO: Cargar variables de entorno y configurar Gemini
 env_path = os.path.join(os.path.dirname(__file__), '.env')
 load_dotenv(dotenv_path=env_path)
 
@@ -31,13 +30,9 @@ else:
     genai.configure(api_key=api_key)
     print("✅ API Key de Gemini configurada correctamente")
 
-# ==========================================
-# CONFIGURACIÓN FIREBASE (Base de Datos) - AGREGADO
-# ==========================================
 db = None
 try:
     if not firebase_admin._apps:
-        # Opción A: Si existe el archivo local (Desarrollo en PC)
         cred_path = os.path.join(os.path.dirname(__file__), "firebase_credenciales.json")
         
         if os.path.exists(cred_path):
@@ -45,7 +40,6 @@ try:
             firebase_admin.initialize_app(cred)
             print("🔥 Firebase conectado usando archivo local.")
         
-        # Opción B: Si estamos en la Nube (Render) usamos Variable de Entorno
         elif os.getenv("FIREBASE_CREDENTIALS"):
             cred_dict = json.loads(os.getenv("FIREBASE_CREDENTIALS"))
             cred = credentials.Certificate(cred_dict)
@@ -59,9 +53,7 @@ try:
 except Exception as e:
     print(f"❌ Error inicializando Firebase: {e}")
 
-# ==========================================
-# Carga del Modelo Keras (Tu código original)
-# ==========================================
+# carga del modelo keras
 try:
     from tensorflow import keras
     MODELO_PATH = os.path.join(os.path.dirname(__file__), "Modelo01.keras")
@@ -84,9 +76,7 @@ except ImportError:
     def cargar_modelo():
         return None
 
-# ==========================================
-# 1. LÓGICA DE NEGOCIO (Riesgo Rancha)
-# ==========================================
+# 1. lógica del cálculo de riesgo de rancha
 def calcular_riesgo_rancha(temp, hum):
     t = float(temp)
     h = float(hum)
@@ -98,9 +88,7 @@ def calcular_riesgo_rancha(temp, hum):
     if (temp_alerta or temp_ideal) and h >= 80: return "ALERTA DE RANCHA", "rancha"
     return "POCO FAVORABLE", "optimo"
 
-# ==========================================
-# 2. LÓGICA DE OBTENCIÓN DE DATOS (NASA)
-# ==========================================
+# 2. lógica de obtención de los datos (NASA)
 def get_weekly_weather_summary(lat, lon):
     start_date_obj = datetime.now() - timedelta(days=8)
     start_date_str = start_date_obj.strftime("%Y%m%d")
@@ -151,19 +139,15 @@ def get_weekly_weather_summary(lat, lon):
         print(f"Error procesando datos: {e}")
         return None
 
-# ==========================================
-# 3. LÓGICA DE GUARDADO EN FIREBASE (PROMEDIOS) - AGREGADO
-# ==========================================
+# 3. lógica de guardado en firebase
 def guardar_datos_firebase(temp, hum, precip):
     if db is None:
-        # print("❌ Firebase no está inicializado. No se guardaron datos.")
         return
 
     try:
         fecha_hoy = datetime.now().strftime("%Y-%m-%d")
         doc_ref = db.collection('historial_diario').document(fecha_hoy)
         
-        # OPERACIÓN ATÓMICA: Incrementamos valores sin tener que leer antes.
         doc_ref.set({
             'fecha': fecha_hoy,
             'temp_suma': firestore.Increment(temp),
@@ -177,9 +161,8 @@ def guardar_datos_firebase(temp, hum, precip):
     except Exception as e:
         print(f"❌ Error escribiendo en Firebase: {e}")
 
-# ==========================================
-# 4. CONFIGURACIÓN API (FastAPI)
-# ==========================================
+
+# 4. configuración API
 app = FastAPI()
 
 @app.get("/")
@@ -191,7 +174,6 @@ app.add_middleware(
     allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"],
 )
 
-# --- MODELOS PYDANTIC ---
 class PredictRequest(BaseModel):
     lat: float
     lon: float
@@ -204,13 +186,11 @@ class ModelPredictRequest(BaseModel):
 class ChatRequest(BaseModel):
     message: str
 
-# ### NUEVO: Modelo para Guardar Sensor
 class SensorData(BaseModel):
     temp: float
     hum: float
     precip: float
 
-# --- ENDPOINTS ---
 
 @app.post('/api/predict')
 async def predict(data: PredictRequest):
@@ -286,13 +266,13 @@ async def predict_model(data: ModelPredictRequest):
         print(f"Error modelo: {e}")
         raise HTTPException(500, detail=f"Error: {str(e)}")
 
-# ### NUEVO: ENDPOINT PARA GUARDAR SENSOR (FIREBASE)
+# ENDPOINT PARA GUARDAR SENSOR (FIREBASE)
 @app.post("/api/guardar-sensor")
 async def guardar_sensor(data: SensorData):
     guardar_datos_firebase(data.temp, data.hum, data.precip)
     return {"status": "success", "mensaje": "Datos enviados a Firebase"}
 
-# ### NUEVO: ENDPOINT PARA CONSULTAR HISTORIAL (CALCULA PROMEDIOS)
+# ENDPOINT PARA CONSULTAR HISTORIAL (CALCULA PROMEDIOS)
 @app.get("/api/historial")
 async def obtener_historial():
     if db is None: return {"error": "Firebase no conectado"}
@@ -312,9 +292,7 @@ async def obtener_historial():
         return historial
     except Exception as e: return {"error": str(e)}
 
-# ==========================================
-# ENDPOINT CHATBOT (GEMINI) - TU LÓGICA ORIGINAL
-# ==========================================
+# ENDPOINT CHATBOT  
 @app.post("/assistant_text")
 async def assistant_text(req: ChatRequest):
     if not req.message or len(req.message.strip()) == 0: return {"error": "Mensaje vacío."}

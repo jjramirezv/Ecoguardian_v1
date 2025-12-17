@@ -6,16 +6,16 @@ const ChatBot = () => {
   const [messages, setMessages] = useState([{ role: 'assistant', content: '¡Hola! Soy experto en papas. Pregúntame sobre la Rancha o cuidados.' }]);
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [soundEnabled, setSoundEnabled] = useState(true); // Nuevo estado para controlar audio
+  const [soundEnabled, setSoundEnabled] = useState(true); 
   const messagesEndRef = useRef(null);
-  const synthRef = useRef(window.speechSynthesis); // Referencia al sintetizador
+  const synthRef = useRef(window.speechSynthesis);
 
-  // Efecto para hacer scroll al fondo
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Función para cancelar audio al cerrar o desmontar
+
   useEffect(() => {
     return () => {
       if (synthRef.current) synthRef.current.cancel();

@@ -32,7 +32,7 @@ const Dashboard = () => {
   const [inputPassword, setInputPassword] = useState('');
   const [passwordError, setPasswordError] = useState('');
 
-  // --- SOLUCIÓN PARA BOTONES DE NAVEGACIÓN (ATRÁS/ADELANTE) ---
+
   useEffect(() => {
     window.history.replaceState({ mode: 'selector' }, '', '');
     const handlePopState = (event) => {
@@ -51,7 +51,6 @@ const Dashboard = () => {
     window.history.pushState({ mode: newMode }, '', '');
   };
 
-  // --- LÓGICA DE RIESGO ---
   const calcularRiesgo = (temp, hum) => {
     const t = parseFloat(temp || 0); const h = parseFloat(hum || 0);
     if (t === 0 && h === 0) return { nivel: 'ESPERANDO...', code: 'optimo' };
@@ -62,7 +61,7 @@ const Dashboard = () => {
     return { nivel: 'CLIMA ÓPTIMO', code: 'optimo' };
   };
 
-  // --- MQTT ---
+  // mqtt
   useEffect(() => {
     let client;
     let watchdog; 
@@ -96,8 +95,6 @@ const Dashboard = () => {
     return () => { if (client) client.end(); clearTimeout(watchdog); };
   }, [mode]);
 
-  // --- HANDLERS (CORREGIDOS: SIN ERRORES Y SIN CARGA INFINITA) ---
-
   const handleGPS = () => {
     setLoading(true);
     setLoadingText('Conectando con satélite...');
@@ -107,8 +104,6 @@ const Dashboard = () => {
       return;
     }
 
-    // --- SEGURO ANTI-CARGA INFINITA ---
-    // Si en 5 segundos no tenemos respuesta, forzamos la detención
     const safetyTimer = setTimeout(() => {
         setLoading(false);
         console.log("Tiempo de espera GPS agotado (Silencioso)");
@@ -116,13 +111,13 @@ const Dashboard = () => {
 
     const options = {
         enableHighAccuracy: false, 
-        timeout: 4000,       // Timeout interno del navegador (un poco menos que el seguro)
+        timeout: 4000,      
         maximumAge: Infinity 
     };
 
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
-        clearTimeout(safetyTimer); // Cancelamos el seguro porque funcionó
+        clearTimeout(safetyTimer); 
         try {
           setLoadingText('Analizando datos climáticos...');
           const res = await fetch(`${API_URL}/api/predict`, {
@@ -142,9 +137,9 @@ const Dashboard = () => {
         }
       }, 
       (err) => {
-        clearTimeout(safetyTimer); // Cancelamos el seguro porque ya respondió con error
+        clearTimeout(safetyTimer); 
         console.warn("GPS falló (silencioso):", err.message);
-        setLoading(false); // Detenemos la carga inmediatamente
+        setLoading(false);
       }, 
       options
     );

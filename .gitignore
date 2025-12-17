@@ -6,7 +6,6 @@ __pycache__/
 *.pyc
 .DS_Store
 
-# --- SECRETOS (¡ESTO ES LO IMPORTANTE!) ---
 .env
 firebase_credentials.json
 backend/.env
