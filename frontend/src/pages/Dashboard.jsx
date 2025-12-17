@@ -14,7 +14,7 @@ const API_URL = 'https://ecoguardian-apii.onrender.com';
 const Dashboard = () => {
   const [loading, setLoading] = useState(false);
   const [loadingText, setLoadingText] = useState('');
-  const [errorMessage, setErrorMessage] = useState(''); 
+  // Eliminado el estado de error visible
   
   const [mode, setMode] = useState('selector'); 
   const [gpsData, setGpsData] = useState(null);
@@ -96,31 +96,34 @@ const Dashboard = () => {
     return () => { if (client) client.end(); clearTimeout(watchdog); };
   }, [mode]);
 
-  // --- HANDLERS (CORREGIDOS) ---
+  // --- HANDLERS (CORREGIDOS: SIN ERRORES Y SIN CARGA INFINITA) ---
 
   const handleGPS = () => {
-    // 1. Limpiamos errores previos
-    setErrorMessage(''); 
     setLoading(true);
-    setLoadingText('Conectando con satélite...'); // Texto más técnico para dar feedback
+    setLoadingText('Conectando con satélite...');
 
     if (!navigator.geolocation) {
-      // Si el navegador no tiene soporte, no mostramos error visual para no molestar,
-      // solo detenemos la carga.
       setLoading(false);
       return;
     }
 
+    // --- SEGURO ANTI-CARGA INFINITA ---
+    // Si en 5 segundos no tenemos respuesta, forzamos la detención
+    const safetyTimer = setTimeout(() => {
+        setLoading(false);
+        console.log("Tiempo de espera GPS agotado (Silencioso)");
+    }, 5000);
+
     const options = {
-        enableHighAccuracy: false, // Rápido (WiFi/IP)
-        timeout: 10000,            // 10s es suficiente
-        maximumAge: Infinity       // ¡IMPORTANTE! Usa la última ubicación conocida INMEDIATAMENTE
+        enableHighAccuracy: false, 
+        timeout: 4000,       // Timeout interno del navegador (un poco menos que el seguro)
+        maximumAge: Infinity 
     };
 
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
+        clearTimeout(safetyTimer); // Cancelamos el seguro porque funcionó
         try {
-          // Éxito al obtener coordenadas
           setLoadingText('Analizando datos climáticos...');
           const res = await fetch(`${API_URL}/api/predict`, {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -133,20 +136,22 @@ const Dashboard = () => {
           navigateTo('gps'); 
           setShowResults(false);
         } catch (error) { 
-           // Error de servidor silencioso en UI
            console.error("Error API:", error);
         } finally { 
             setLoading(false); 
         }
       }, 
-     
+      (err) => {
+        clearTimeout(safetyTimer); // Cancelamos el seguro porque ya respondió con error
+        console.warn("GPS falló (silencioso):", err.message);
+        setLoading(false); // Detenemos la carga inmediatamente
+      }, 
       options
     );
   };
 
   const handleHardwareAccess = () => {
     setLoading(false); 
-    setErrorMessage('');
     setShowPasswordModal(true);
     setInputPassword('');
     setPasswordError('');
@@ -231,12 +236,11 @@ const Dashboard = () => {
             overflow: hidden;
         }
         
-        /* --- ESTILOS DEL SELECTOR CORREGIDOS --- */
         .selector-container {
             text-align: center;
             width: 100%;
             max-width: 900px; 
-            margin-top: 100px; /* Margen base */
+            margin-top: 100px; 
         }
         .selector-cards {
             display: grid;
@@ -259,20 +263,16 @@ const Dashboard = () => {
             box-shadow: 0 15px 40px rgba(131, 176, 95, 0.15);
         }
         
-        /* CORRECCIÓN PARA LAPTOP/PC: */
         @media (min-width: 769px) {
-            /* NO ocultamos el título, solo lo hacemos más discreto si es necesario, 
-               pero tú pediste que aparezca "Elija uno". */
-            .selector-title-group h1 { display: none; } /* Ocultamos "EcoGuardian" redundante */
+            .selector-title-group h1 { display: none; } 
             .selector-title-group p { 
                 font-size: 1.5rem; 
                 color: var(--text-main); 
                 font-weight: 700;
                 margin-bottom: 40px;
             }
-            
             .option-card { padding: 60px 40px; }
-            .selector-container { margin-top: 150px; } /* Más separación del navbar */
+            .selector-container { margin-top: 150px; } 
         }
 
         @media (max-width: 768px) {
@@ -281,8 +281,7 @@ const Dashboard = () => {
             .sidebar { width: 100%; height: auto; border-right: none; border-top: 1px solid #f0f0f0; padding: 20px; order: 1; }
             .scene-area { width: 100%; height: 45vh; min-height: 350px; order: 2; }
             .selector-cards { grid-template-columns: 1fr; gap: 20px; }
-            
-            .selector-title-group h1 { display: block; } /* En celular sí mostramos el logo */
+            .selector-title-group h1 { display: block; }
         }
 
         .badge { display: inline-block; padding: 6px 14px; border-radius: 20px; font-size: 0.8rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; }
@@ -295,22 +294,6 @@ const Dashboard = () => {
         .btn-green { background: var(--primary); color: white; }
         .btn-white { background: white; border: 1px solid #ddd; color: var(--text-main); }
         .floating-label { position: absolute; top: 20px; left: 20px; background: rgba(255,255,255,0.9); padding: 8px 16px; border-radius: 30px; font-weight: 600; color: var(--text-main); display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); z-index: 10; }
-        
-        .error-banner {
-            background-color: #fee2e2;
-            color: #c53030;
-            padding: 15px;
-            border-radius: 12px;
-            margin-top: 25px;
-            font-size: 0.95rem;
-            font-weight: 600;
-            border: 1px solid #fecaca;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-            text-align: center;
-        }
       `}</style>
 
       {mode === 'selector' ? (
@@ -318,7 +301,6 @@ const Dashboard = () => {
           
           <div className="selector-title-group">
              <h1 style={{ fontSize: '2.5rem', color: 'var(--text-main)', marginBottom: '10px' }}>EcoGuardian 🌱</h1>
-             {/* Este texto ahora se ve en PC gracias al CSS corregido */}
              <p>Selecciona tu fuente de monitoreo</p>
           </div>
           
@@ -346,12 +328,6 @@ const Dashboard = () => {
                 {loadingText}
                 <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
              </div>
-          )}
-
-          {errorMessage && (
-              <div className="error-banner">
-                  {errorMessage}
-              </div>
           )}
         </div>
       ) : (
