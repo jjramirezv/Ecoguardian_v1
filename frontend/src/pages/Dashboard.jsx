@@ -34,15 +34,12 @@ const Dashboard = () => {
 
   // --- SOLUCIÓN PARA BOTONES DE NAVEGACIÓN (ATRÁS/ADELANTE) ---
   useEffect(() => {
-    // Al cargar, reemplazamos el estado actual para tener control
     window.history.replaceState({ mode: 'selector' }, '', '');
 
     const handlePopState = (event) => {
-      // Si el usuario presiona "Atrás", el evento trae el estado anterior
       if (event.state && event.state.mode) {
         setMode(event.state.mode);
       } else {
-        // Si no hay estado (inicio), volvemos al selector
         setMode('selector');
       }
     };
@@ -51,10 +48,8 @@ const Dashboard = () => {
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
-  // Función para cambiar de modo y guardar en el historial del navegador
   const navigateTo = (newMode) => {
     setMode(newMode);
-    // Esto crea un "punto de guardado" en el historial
     window.history.pushState({ mode: newMode }, '', '');
   };
 
@@ -106,25 +101,27 @@ const Dashboard = () => {
   // --- HANDLERS ---
 
   const handleGPS = () => {
+    // 1. LIMPIEZA INMEDIATA DE ERRORES PREVIOS
+    setErrorMessage(''); 
     setLoading(true);
-    setLoadingText('Obteniendo coordenadas...');
-    setErrorMessage(''); // Borra cualquier error previo
-
+    setLoadingText('Localizando dispositivo...');
+    
     if (!navigator.geolocation) {
-      setErrorMessage("Tu navegador no soporta GPS.");
+      setErrorMessage("Tu navegador no tiene soporte GPS.");
       setLoading(false);
       return;
     }
 
-    // OPCIONES CORREGIDAS PARA QUE NO DEMORE
+    // 2. CONFIGURACIÓN OPTIMIZADA PARA EVITAR ERRORES FALSOS
     const options = {
-        enableHighAccuracy: false, // CLAVE: False es mucho más rápido en laptops
-        timeout: 10000,
-        maximumAge: Infinity       // CLAVE: Si ya tiene una ubicación guardada, úsala AL INSTANTE.
+        enableHighAccuracy: false, // False es vital para que funcione rápido en laptop (WiFi)
+        timeout: 15000,            // Aumentado a 15s: Da más tiempo a la laptop para responder
+        maximumAge: 0              // 0: Obliga a buscar de nuevo y no usar errores guardados en caché
     };
 
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
+        // ÉXITO
         try {
           setLoadingText('Consultando clima...');
           const res = await fetch(`${API_URL}/api/predict`, {
@@ -135,26 +132,28 @@ const Dashboard = () => {
           const r = calcularRiesgo(d.datos_climaticos?.temp_promedio_semanal, d.datos_climaticos?.humedad_promedio_semanal);
           setGpsData({ ...d, ...r }); 
           
-          navigateTo('gps'); // Usamos la nueva navegación
+          navigateTo('gps'); 
           setShowResults(false);
         } catch (error) { 
-            setErrorMessage("Error de conexión con el servidor."); 
+            setErrorMessage("Error de conexión con el servidor de clima."); 
         } finally { 
             setLoading(false); 
         }
       }, 
       (err) => {
-        console.warn(err);
+        // ERROR REAL
+        console.warn("Error GPS:", err);
         setLoading(false);
-        // MENSAJES CLAROS PARA EL USUARIO
+        
+        // Solo mostramos error si REALMENTE falló después de intentar
         if (err.code === 1) {
-            setErrorMessage("⚠️ Permiso bloqueado. Haz clic en el candado 🔒 de la barra de direcciones y selecciona 'Permitir'.");
+            setErrorMessage("⚠️ Acceso denegado. Habilita la ubicación en el navegador.");
         } else if (err.code === 2) {
-            setErrorMessage("⚠️ Ubicación no disponible. Intenta conectarte a otra red WiFi.");
+            setErrorMessage("⚠️ Ubicación no disponible. Verifica tu conexión WiFi.");
         } else if (err.code === 3) {
-            setErrorMessage("⚠️ Se agotó el tiempo. Inténtalo de nuevo.");
+            setErrorMessage("⚠️ Se agotó el tiempo de espera. Inténtalo de nuevo.");
         } else {
-            setErrorMessage("⚠️ Error desconocido al obtener ubicación.");
+            setErrorMessage("⚠️ No se pudo obtener la ubicación.");
         }
       }, 
       options
@@ -175,7 +174,7 @@ const Dashboard = () => {
       setLoading(true); 
       setLoadingText('Conectando sensores...');
       setTimeout(() => { 
-          navigateTo('hardware'); // Usamos la nueva navegación
+          navigateTo('hardware'); 
           setLoading(false); 
       }, 800);
     } else {
@@ -251,7 +250,6 @@ const Dashboard = () => {
             text-align: center;
             width: 100%;
             max-width: 900px; 
-            /* SEPARACIÓN DEL NAVBAR CORREGIDA */
             margin-top: 120px; 
         }
         .selector-cards {
@@ -278,7 +276,7 @@ const Dashboard = () => {
         @media (min-width: 769px) {
             .selector-title-group { display: none; }
             .option-card { padding: 60px 40px; }
-            .selector-container { margin-top: 140px; } /* Más aire en PC */
+            .selector-container { margin-top: 140px; } 
         }
 
         @media (max-width: 768px) {
