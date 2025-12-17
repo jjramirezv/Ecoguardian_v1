@@ -98,30 +98,29 @@ const Dashboard = () => {
     return () => { if (client) client.end(); clearTimeout(watchdog); };
   }, [mode]);
 
-  // --- HANDLERS ---
+  // --- HANDLERS (CORREGIDOS SEGÚN TU SOLICITUD) ---
 
   const handleGPS = () => {
-    // 1. LIMPIEZA INMEDIATA DE ERRORES PREVIOS
+    // 1. Limpiamos cualquier error visual previo
     setErrorMessage(''); 
     setLoading(true);
-    setLoadingText('Localizando dispositivo...');
-    
+    setLoadingText('Obteniendo coordenadas...');
+
     if (!navigator.geolocation) {
-      setErrorMessage("Tu navegador no tiene soporte GPS.");
+      // Este sí es un error técnico grave, el navegador no sirve para esto.
+      setErrorMessage("Tu navegador no soporta GPS."); 
       setLoading(false);
       return;
     }
 
-    // 2. CONFIGURACIÓN OPTIMIZADA PARA EVITAR ERRORES FALSOS
     const options = {
-        enableHighAccuracy: false, // False es vital para que funcione rápido en laptop (WiFi)
-        timeout: 15000,            // Aumentado a 15s: Da más tiempo a la laptop para responder
-        maximumAge: 0              // 0: Obliga a buscar de nuevo y no usar errores guardados en caché
+        enableHighAccuracy: false, // Rápido (WiFi/IP)
+        timeout: 20000,            // Tiempo muy largo para evitar errores de timeout falsos
+        maximumAge: Infinity       // IMPORTANTE: Si ya tiene ubicación, úsala SIEMPRE.
     };
 
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
-        // ÉXITO
         try {
           setLoadingText('Consultando clima...');
           const res = await fetch(`${API_URL}/api/predict`, {
@@ -135,25 +134,26 @@ const Dashboard = () => {
           navigateTo('gps'); 
           setShowResults(false);
         } catch (error) { 
-            setErrorMessage("Error de conexión con el servidor de clima."); 
+            // Error de red (API), este sí podría mostrarse o ignorarse.
+            // Lo dejaremos visible porque no es culpa del GPS.
+            console.error(error);
+            setErrorMessage("Error de conexión con el servidor.");
         } finally { 
             setLoading(false); 
         }
       }, 
       (err) => {
-        // ERROR REAL
-        console.warn("Error GPS:", err);
+        console.warn("Info GPS:", err);
         setLoading(false);
         
-        // Solo mostramos error si REALMENTE falló después de intentar
+        // --- FILTRO ESTRICTO ---
+        // SOLO mostramos el cartel rojo si el código es 1 (PERMISSION_DENIED)
         if (err.code === 1) {
-            setErrorMessage("⚠️ Acceso denegado. Habilita la ubicación en el navegador.");
-        } else if (err.code === 2) {
-            setErrorMessage("⚠️ Ubicación no disponible. Verifica tu conexión WiFi.");
-        } else if (err.code === 3) {
-            setErrorMessage("⚠️ Se agotó el tiempo de espera. Inténtalo de nuevo.");
+            setErrorMessage("⚠️ Permiso denegado. Habilita la ubicación en el navegador.");
         } else {
-            setErrorMessage("⚠️ No se pudo obtener la ubicación.");
+            // Si es timeout (3) o unavailable (2), NO HACEMOS NADA visualmente
+            // para no molestar al usuario que tiene el GPS activo.
+            console.log("Error técnico GPS ignorado visualmente:", err.message);
         }
       }, 
       options
