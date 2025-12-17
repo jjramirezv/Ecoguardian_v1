@@ -139,19 +139,7 @@ const Dashboard = () => {
             setLoading(false); 
         }
       }, 
-      (err) => {
-        // ERROR DEL GPS
-        console.warn("GPS Info:", err);
-        setLoading(false);
-        
-        // --- FILTRO DE ERRORES ---
-        // SOLO mostramos el cartel rojo si el permiso fue DENEGADO (Código 1).
-        // Si es timeout o error de posición, NO mostramos nada para no molestar.
-        if (err.code === 1) {
-            setErrorMessage("⚠️ Permiso denegado. Por favor habilita la ubicación en el navegador.");
-        } 
-        // El resto de errores (2 y 3) se ignoran visualmente.
-      }, 
+     
       options
     );
   };
