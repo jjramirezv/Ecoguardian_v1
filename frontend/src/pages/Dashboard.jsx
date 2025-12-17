@@ -35,7 +35,6 @@ const Dashboard = () => {
   // --- SOLUCIÓN PARA BOTONES DE NAVEGACIÓN (ATRÁS/ADELANTE) ---
   useEffect(() => {
     window.history.replaceState({ mode: 'selector' }, '', '');
-
     const handlePopState = (event) => {
       if (event.state && event.state.mode) {
         setMode(event.state.mode);
@@ -43,7 +42,6 @@ const Dashboard = () => {
         setMode('selector');
       }
     };
-
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
@@ -98,31 +96,32 @@ const Dashboard = () => {
     return () => { if (client) client.end(); clearTimeout(watchdog); };
   }, [mode]);
 
-  // --- HANDLERS (CORREGIDOS SEGÚN TU SOLICITUD) ---
+  // --- HANDLERS (CORREGIDOS) ---
 
   const handleGPS = () => {
-    // 1. Limpiamos cualquier error visual previo
+    // 1. Limpiamos errores previos
     setErrorMessage(''); 
     setLoading(true);
-    setLoadingText('Obteniendo coordenadas...');
+    setLoadingText('Conectando con satélite...'); // Texto más técnico para dar feedback
 
     if (!navigator.geolocation) {
-      // Este sí es un error técnico grave, el navegador no sirve para esto.
-      setErrorMessage("Tu navegador no soporta GPS."); 
+      // Si el navegador no tiene soporte, no mostramos error visual para no molestar,
+      // solo detenemos la carga.
       setLoading(false);
       return;
     }
 
     const options = {
         enableHighAccuracy: false, // Rápido (WiFi/IP)
-        timeout: 20000,            // Tiempo muy largo para evitar errores de timeout falsos
-        maximumAge: Infinity       // IMPORTANTE: Si ya tiene ubicación, úsala SIEMPRE.
+        timeout: 10000,            // 10s es suficiente
+        maximumAge: Infinity       // ¡IMPORTANTE! Usa la última ubicación conocida INMEDIATAMENTE
     };
 
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
         try {
-          setLoadingText('Consultando clima...');
+          // Éxito al obtener coordenadas
+          setLoadingText('Analizando datos climáticos...');
           const res = await fetch(`${API_URL}/api/predict`, {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ lat: pos.coords.latitude, lon: pos.coords.longitude })
@@ -134,27 +133,24 @@ const Dashboard = () => {
           navigateTo('gps'); 
           setShowResults(false);
         } catch (error) { 
-            // Error de red (API), este sí podría mostrarse o ignorarse.
-            // Lo dejaremos visible porque no es culpa del GPS.
-            console.error(error);
-            setErrorMessage("Error de conexión con el servidor.");
+           // Error de servidor silencioso en UI
+           console.error("Error API:", error);
         } finally { 
             setLoading(false); 
         }
       }, 
       (err) => {
-        console.warn("Info GPS:", err);
+        // ERROR DEL GPS
+        console.warn("GPS Info:", err);
         setLoading(false);
         
-        // --- FILTRO ESTRICTO ---
-        // SOLO mostramos el cartel rojo si el código es 1 (PERMISSION_DENIED)
+        // --- FILTRO DE ERRORES ---
+        // SOLO mostramos el cartel rojo si el permiso fue DENEGADO (Código 1).
+        // Si es timeout o error de posición, NO mostramos nada para no molestar.
         if (err.code === 1) {
-            setErrorMessage("⚠️ Permiso denegado. Habilita la ubicación en el navegador.");
-        } else {
-            // Si es timeout (3) o unavailable (2), NO HACEMOS NADA visualmente
-            // para no molestar al usuario que tiene el GPS activo.
-            console.log("Error técnico GPS ignorado visualmente:", err.message);
-        }
+            setErrorMessage("⚠️ Permiso denegado. Por favor habilita la ubicación en el navegador.");
+        } 
+        // El resto de errores (2 y 3) se ignoran visualmente.
       }, 
       options
     );
@@ -172,7 +168,7 @@ const Dashboard = () => {
     if (inputPassword === 'admin') {
       setShowPasswordModal(false);
       setLoading(true); 
-      setLoadingText('Conectando sensores...');
+      setLoadingText('Estableciendo conexión...');
       setTimeout(() => { 
           navigateTo('hardware'); 
           setLoading(false); 
@@ -246,11 +242,13 @@ const Dashboard = () => {
             background: linear-gradient(to bottom, #edf7fc, #eaf4e2);
             overflow: hidden;
         }
+        
+        /* --- ESTILOS DEL SELECTOR CORREGIDOS --- */
         .selector-container {
             text-align: center;
             width: 100%;
             max-width: 900px; 
-            margin-top: 120px; 
+            margin-top: 100px; /* Margen base */
         }
         .selector-cards {
             display: grid;
@@ -273,10 +271,20 @@ const Dashboard = () => {
             box-shadow: 0 15px 40px rgba(131, 176, 95, 0.15);
         }
         
+        /* CORRECCIÓN PARA LAPTOP/PC: */
         @media (min-width: 769px) {
-            .selector-title-group { display: none; }
+            /* NO ocultamos el título, solo lo hacemos más discreto si es necesario, 
+               pero tú pediste que aparezca "Elija uno". */
+            .selector-title-group h1 { display: none; } /* Ocultamos "EcoGuardian" redundante */
+            .selector-title-group p { 
+                font-size: 1.5rem; 
+                color: var(--text-main); 
+                font-weight: 700;
+                margin-bottom: 40px;
+            }
+            
             .option-card { padding: 60px 40px; }
-            .selector-container { margin-top: 140px; } 
+            .selector-container { margin-top: 150px; } /* Más separación del navbar */
         }
 
         @media (max-width: 768px) {
@@ -285,7 +293,8 @@ const Dashboard = () => {
             .sidebar { width: 100%; height: auto; border-right: none; border-top: 1px solid #f0f0f0; padding: 20px; order: 1; }
             .scene-area { width: 100%; height: 45vh; min-height: 350px; order: 2; }
             .selector-cards { grid-template-columns: 1fr; gap: 20px; }
-            .selector-title-group { display: block; }
+            
+            .selector-title-group h1 { display: block; } /* En celular sí mostramos el logo */
         }
 
         .badge { display: inline-block; padding: 6px 14px; border-radius: 20px; font-size: 0.8rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; }
@@ -318,9 +327,11 @@ const Dashboard = () => {
 
       {mode === 'selector' ? (
         <div className="selector-container">
+          
           <div className="selector-title-group">
              <h1 style={{ fontSize: '2.5rem', color: 'var(--text-main)', marginBottom: '10px' }}>EcoGuardian 🌱</h1>
-             <p style={{ color: 'var(--text-light)', fontSize: '1.1rem' }}>Selecciona tu fuente de monitoreo</p>
+             {/* Este texto ahora se ve en PC gracias al CSS corregido */}
+             <p>Selecciona tu fuente de monitoreo</p>
           </div>
           
           <div className="selector-cards">
@@ -344,7 +355,7 @@ const Dashboard = () => {
           {loading && (
              <div style={{ marginTop: '30px', color: 'var(--primary)', fontWeight: 'bold', fontSize: '1.1rem' }}>
                 <span style={{display: 'inline-block', width: '20px', height:'20px', border:'3px solid #ccc', borderTop:'3px solid var(--primary)', borderRadius:'50%', animation:'spin 1s linear infinite', marginRight:'10px', verticalAlign:'middle'}}></span>
-                {loadingText || 'Cargando sistema...'}
+                {loadingText}
                 <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
              </div>
           )}
